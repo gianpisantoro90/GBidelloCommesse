@@ -1,0 +1,139 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(248, 39%, 98%);
+  --foreground: hsl(213, 24%, 20%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(213, 24%, 20%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(213, 24%, 20%);
+  --primary: hsl(182, 52%, 23%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(0, 74%, 49%);
+  --secondary-foreground: hsl(0, 0%, 100%);
+  --muted: hsl(210, 40%, 96%);
+  --muted-foreground: hsl(213, 24%, 20%);
+  --accent: hsl(248, 39%, 98%);
+  --accent-foreground: hsl(182, 52%, 23%);
+  --destructive: hsl(0, 74%, 49%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --border: hsl(214, 32%, 91%);
+  --input: hsl(200, 24%, 97%);
+  --ring: hsl(182, 89%, 53%);
+  --success: hsl(142, 71%, 45%);
+  --warning: hsl(25, 95%, 53%);
+  --g2-primary: hsl(182, 52%, 23%);
+  --g2-secondary: hsl(0, 74%, 49%);
+  --g2-accent: hsl(248, 39%, 98%);
+  --g2-dark: hsl(222, 84%, 5%);
+  --g2-text: hsl(213, 24%, 20%);
+  --g2-success: hsl(142, 71%, 45%);
+  --g2-warning: hsl(25, 95%, 53%);
+  --chart-1: hsl(182, 52%, 23%);
+  --chart-2: hsl(160, 100%, 36%);
+  --chart-3: hsl(42, 93%, 56%);
+  --chart-4: hsl(147, 78%, 42%);
+  --chart-5: hsl(341, 75%, 51%);
+  --sidebar: hsl(0, 0%, 100%);
+  --sidebar-foreground: hsl(213, 24%, 20%);
+  --sidebar-primary: hsl(182, 52%, 23%);
+  --sidebar-primary-foreground: hsl(0, 0%, 100%);
+  --sidebar-accent: hsl(248, 39%, 98%);
+  --sidebar-accent-foreground: hsl(182, 52%, 23%);
+  --sidebar-border: hsl(205, 25%, 91%);
+  --sidebar-ring: hsl(182, 89%, 53%);
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Ubuntu', 'Cantarell', 'Noto Sans', 'Helvetica', 'Arial', sans-serif;
+  --font-serif: 'Georgia', serif;
+  --font-mono: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+  --radius: 1.4rem;
+}
+
+.dark {
+  --background: hsl(0, 0%, 0%);
+  --foreground: hsl(200, 7%, 91%);
+  --card: hsl(228, 10%, 10%);
+  --card-foreground: hsl(0, 0%, 85%);
+  --popover: hsl(0, 0%, 0%);
+  --popover-foreground: hsl(200, 7%, 91%);
+  --primary: hsl(182, 88%, 53%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(195, 15%, 95%);
+  --secondary-foreground: hsl(213, 24%, 20%);
+  --muted: hsl(0, 0%, 9%);
+  --muted-foreground: hsl(210, 3%, 46%);
+  --accent: hsl(206, 70%, 8%);
+  --accent-foreground: hsl(182, 88%, 53%);
+  --destructive: hsl(0, 74%, 49%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --border: hsl(210, 5%, 15%);
+  --input: hsl(208, 28%, 18%);
+  --ring: hsl(182, 89%, 53%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-accent text-foreground;
+    font-family: var(--font-sans);
+  }
+}
+
+@layer components {
+  .tab-button {
+    @apply px-6 py-4 text-sm font-semibold border-b-3 border-transparent hover:bg-white transition-all duration-200 flex items-center gap-2 whitespace-nowrap;
+  }
+  
+  .tab-button.active {
+    @apply border-secondary bg-white text-primary;
+  }
+  
+  .status-indicator {
+    @apply w-2 h-2 rounded-full inline-block animate-pulse;
+  }
+  
+  .card-g2 {
+    @apply bg-white rounded-2xl shadow-lg border border-gray-100 p-6;
+  }
+  
+  .button-g2-primary {
+    @apply bg-primary text-white py-3 px-6 rounded-xl font-semibold hover:opacity-90 transition-colors duration-200;
+  }
+  
+  .button-g2-secondary {
+    @apply border-2 border-primary text-primary py-3 px-6 rounded-xl font-semibold hover:bg-primary hover:text-white transition-colors duration-200;
+  }
+  
+  .input-g2 {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-colors;
+  }
+}
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(8px); 
+  } 
+  to { 
+    opacity: 1; 
+    transform: none; 
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease forwards;
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 1; 
+  } 
+  50% { 
+    opacity: 0.6; 
+  }
+}
