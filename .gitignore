@@ -9,10 +9,14 @@ vite.config.ts.*
 .env.local
 .env
 
-# Local data
-data/
+# Local directories
 .local/
 .claude/
 
 # Temporary files
 nul
+
+# Ignore backup and temp files in data directory
+data/*.bak
+data/*.tmp
+data/*-backup.json

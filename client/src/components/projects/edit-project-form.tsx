@@ -33,6 +33,8 @@ export default function EditProjectForm({ project, children }: EditProjectFormPr
       template: project.template,
       status: project.status,
       tipoRapporto: project.tipoRapporto || "diretto",
+      tipoIntervento: project.tipoIntervento || "professionale",
+      budget: project.budget || undefined,
       committenteFinale: project.committenteFinale || undefined,
       fsRoot: project.fsRoot || undefined,
       metadata: project.metadata || {},
@@ -78,6 +80,8 @@ export default function EditProjectForm({ project, children }: EditProjectFormPr
         template: project.template,
         status: project.status,
         tipoRapporto: project.tipoRapporto || "diretto",
+        tipoIntervento: project.tipoIntervento || "professionale",
+        budget: project.budget || undefined,
         committenteFinale: project.committenteFinale || undefined,
         fsRoot: project.fsRoot || undefined,
         metadata: project.metadata || {},
@@ -241,7 +245,55 @@ export default function EditProjectForm({ project, children }: EditProjectFormPr
                 </FormItem>
               )}
             />
-            
+
+            <FormField
+              control={form.control}
+              name="tipoIntervento"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipologia Intervento</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="edit-project-tipo-intervento">
+                        <SelectValue placeholder="Seleziona tipologia" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="professionale">📋 Professionale</SelectItem>
+                      <SelectItem value="realizzativo">🏗️ Realizzativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="budget"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Budget Iniziale
+                    <span className="ml-1 text-xs text-gray-500 font-normal">(opzionale)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={field.value || ""}
+                      onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                      data-testid="edit-project-budget"
+                      placeholder="Es. 50000.00"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="status"

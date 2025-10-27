@@ -1,103 +1,55 @@
-import express, { type Request, Response, NextFunction } from "express";
-import session from "express-session";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import express, { type Request, Response, NextFunction } from 'express';
+import { router } from './routes.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+const PORT = process.env.PORT || 5000;
 
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallback-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    secure: false, // Set to true in production with HTTPS
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24 // 24 hours
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// CORS headers for development
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
   }
-}));
-
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
   next();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
+// API Routes
+app.use(router);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  const publicPath = path.join(__dirname, '..', 'dist', 'public');
+  app.use(express.static(publicPath));
 
-    res.status(status).json({ message });
-    throw err;
+  app.get('*', (req: Request, res: Response) => {
+    res.sendFile(path.join(publicPath, 'index.html'));
   });
+}
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development" || process.env.NODE_ENV === "local") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 3000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '3000', 10);
-  
-  // Gestione errori migliorata per Windows
-  server.on('error', (err: any) => {
-    if (err.code === 'EADDRINUSE' || err.code === 'ENOTSUP') {
-      console.error(`\n❌ Errore: Porta ${port} già in uso o non supportata`);
-      console.error(`💡 Soluzioni:`);
-      console.error(`   1. Chiudi altri processi sulla porta ${port}`);
-      console.error(`   2. Usa una porta diversa: PORT=3001 npm run dev`);
-      console.error(`   3. Su Windows, usa: start-windows.bat o start-windows.ps1\n`);
-      process.exit(1);
-    } else {
-      console.error('Errore del server:', err);
-      process.exit(1);
-    }
+// Error handling middleware
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message
   });
+});
 
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: process.platform !== 'win32', // reusePort non supportato su Windows
-  }, () => {
-    log(`serving on port ${port}`);
-    console.log(`\n🚀 G2 Ingegneria avviato con successo!`);
-    console.log(`📱 Apri: http://localhost:${port}`);
-    console.log(`⏹️  Premi Ctrl+C per fermare\n`);
-  });
-})();
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📁 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+export default app;

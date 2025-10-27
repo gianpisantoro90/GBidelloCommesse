@@ -91,19 +91,9 @@ export default function ClientsTable() {
   // Delete client mutation
   const deleteClientMutation = useMutation({
     mutationFn: async (clientId: string) => {
-      const response = await fetch(`/api/clients/${clientId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Errore sconosciuto' }));
-        throw new Error(errorData.message || `Errore HTTP ${response.status}`);
-      }
-      
-      return response.json();
+      const response = await apiRequest("DELETE", `/api/clients/${clientId}`);
+      // 204 No Content doesn't have a body, so don't try to parse JSON
+      return response.status === 204 ? null : response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });

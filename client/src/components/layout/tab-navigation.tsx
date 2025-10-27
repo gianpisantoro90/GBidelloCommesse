@@ -7,8 +7,6 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
   const tabs = [
     { id: "dashboard", label: "Dashboard", emoji: "🏠" },
     { id: "gestione", label: "Gestione", emoji: "📁" },
-    { id: "routing", label: "Auto-Routing", emoji: "🤖" },
-    { id: "onedrive", label: "OneDrive Browser", emoji: "☁️" },
     { id: "sistema", label: "Sistema", emoji: "⚙️" },
   ];
 

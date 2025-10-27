@@ -19,20 +19,8 @@ function LoadingScreen() {
   );
 }
 
-function AuthenticatedRouter() {
-  return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route>
-        <Dashboard />
-      </Route>
-    </Switch>
-  );
-}
-
 function AppContent() {
-  const { isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated, isLoading, login, user, logout } = useAuth();
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -45,7 +33,13 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-g2-accent">
       <Toaster />
-      <AuthenticatedRouter />
+      <Switch>
+        <Route path="/" component={() => <Dashboard user={user} onLogout={logout} />} />
+        <Route path="/dashboard" component={() => <Dashboard user={user} onLogout={logout} />} />
+        <Route>
+          <Dashboard user={user} onLogout={logout} />
+        </Route>
+      </Switch>
     </div>
   );
 }

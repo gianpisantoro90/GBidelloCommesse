@@ -17,8 +17,10 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+import { User } from "@/hooks/useAuth";
+
 interface LoginPageProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess: (user?: User) => void;
 }
 
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
@@ -41,8 +43,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       const response = await apiRequest("POST", "/api/auth/login", data);
       const result = await response.json();
 
-      if (result.success) {
-        onLoginSuccess();
+      if (result.success && result.user) {
+        onLoginSuccess(result.user);
       } else {
         setError(result.message || "Errore durante il login");
       }
@@ -63,7 +65,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">G2 Ingegneria</CardTitle>
+          <CardTitle className="text-2xl font-bold">Gbidello Engineering & Partners</CardTitle>
           <CardDescription>
             Accedi al sistema di gestione commesse
           </CardDescription>

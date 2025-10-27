@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,10 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertProjectSchema, type InsertProject } from "@shared/schema";
-import { useOneDriveSync } from "@/hooks/use-onedrive-sync";
-import { useOneDriveRootConfig } from "@/hooks/use-onedrive-root-config";
 import { TIPO_RAPPORTO_CONFIG, type TipoRapportoType } from "@/lib/prestazioni-utils";
-import { Cloud, CheckCircle, AlertCircle, Loader2, FolderOpen, ExternalLink, Settings, Save } from "lucide-react";
+import { CheckCircle, Loader2, Save } from "lucide-react";
 import { z } from "zod";
 
 const formSchema = insertProjectSchema.extend({
@@ -27,11 +25,8 @@ interface NewProjectFormProps {
 
 export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) {
   const [generatedCode, setGeneratedCode] = useState("");
-  const [creationStep, setCreationStep] = useState<string>("");
-  const [createdFolderPath, setCreatedFolderPath] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isConnected } = useOneDriveSync();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -43,19 +38,14 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
       template: "LUNGO",
       status: "in_corso",
       tipoRapporto: "diretto",
+      tipoIntervento: "professionale",
+      budget: undefined,
       committenteFinale: undefined,
       code: "",
-      fsRoot: null,
-      metadata: {},
+      fsRoot: undefined,
+      metadata: undefined,
     },
   });
-
-  // Use shared OneDrive root folder configuration hook
-  const {
-    rootConfig,
-    isConfigured: isRootConfigured,
-    isLoading: isLoadingConfig,
-  } = useOneDriveRootConfig();
 
   const generateCodeMutation = useMutation({
     mutationFn: async (data: { client: string; city: string; year: number }) => {
@@ -75,85 +65,27 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
     },
   });
 
-  // OneDrive project creation mutation
+  // Simple project creation
   const createProjectMutation = useMutation({
     mutationFn: async (data: InsertProject) => {
-      // Step 1: Create project in database
-      setCreationStep("💾 Creando commessa nel database...");
       const projectResponse = await apiRequest("POST", "/api/projects", data);
       const project = await projectResponse.json();
-
-      // Step 2: Create OneDrive folder with template
-      setCreationStep("☁️ Creando cartella OneDrive...");
-      const folderResponse = await apiRequest("POST", "/api/onedrive/create-project-folder", {
-        projectCode: data.code,
-        template: data.template,
-        object: data.object // Pass project object for folder naming
-      });
-      const folderResult = await folderResponse.json();
-      
-      if (!folderResult.success) {
-        throw new Error('Failed to create OneDrive folder');
-      }
-
-      // Step 3: Finalize setup
-      setCreationStep("✅ Finalizzando configurazione...");
-      setCreatedFolderPath(folderResult.folder?.path || '');
-      
-      return { project, folder: folderResult.folder };
+      return project;
     },
-    onSuccess: ({ project, folder }) => {
-      setCreationStep("");
+    onSuccess: (project) => {
       toast({
         title: "Commessa creata con successo",
-        description: `Progetto ${project.code} creato su OneDrive: ${folder?.name}`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      queryClient.invalidateQueries({ queryKey: ['onedrive-files'] });
-      onProjectSaved(project);
-    },
-    onError: (error: any) => {
-      setCreationStep("");
-      console.error('Project creation error:', error);
-      
-      let errorMessage = "Si è verificato un errore durante la creazione della commessa";
-      if (error.message?.includes('OneDrive')) {
-        errorMessage = "Errore nella creazione della cartella OneDrive. Verifica la connessione.";
-      } else if (error.message?.includes('root folder')) {
-        errorMessage = "Cartella radice OneDrive non configurata. Configura nelle impostazioni.";
-      }
-      
-      toast({
-        title: "Errore nella creazione",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Simple project creation without OneDrive
-  const createProjectOnlyMutation = useMutation({
-    mutationFn: async (data: InsertProject) => {
-      setCreationStep("💾 Creando commessa nel database...");
-      const projectResponse = await apiRequest("POST", "/api/projects", data);
-      const project = await projectResponse.json();
-      return { project };
-    },
-    onSuccess: ({ project }) => {
-      setCreationStep("");
-      toast({
-        title: "Commessa creata con successo",
-        description: `Progetto ${project.code} creato. Potrai associare OneDrive successivamente.`,
+        description: `Progetto ${project.code} creato con successo.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       onProjectSaved(project);
+      form.reset();
+      setGeneratedCode("");
     },
     onError: (error: any) => {
-      setCreationStep("");
       console.error('Project creation error:', error);
-      
+
       toast({
         title: "Errore nella creazione",
         description: "Si è verificato un errore durante la creazione della commessa",
@@ -164,7 +96,7 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
 
   const handleGenerateCode = () => {
     const { client, city, year } = form.getValues();
-    if (!client || !city || !year) {
+    if (!client || !city || year === undefined || year === null) {
       toast({
         title: "Campi mancanti",
         description: "Compilare Cliente, Città e Anno prima di generare il codice",
@@ -176,34 +108,14 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
     generateCodeMutation.mutate({ client, city, year });
   };
 
-  const handleNavigateToOneDriveSettings = () => {
-    // Navigate to OneDrive configuration in system settings
-    window.location.href = '/#sistema';
-  };
+  const onSubmit = (data: FormData) => {
+    console.log('Form data:', data);
+    console.log('Form errors:', form.formState.errors);
 
-  const onSubmitWithOneDrive = (data: FormData) => {
-    if (!generatedCode) {
+    if (!data.code) {
       toast({
         title: "Codice mancante",
         description: "Generare prima il codice commessa",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!isConnected) {
-      toast({
-        title: "OneDrive non connesso",
-        description: "Configura OneDrive nelle impostazioni di sistema prima di creare una commessa",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!isRootConfigured) {
-      toast({
-        title: "Cartella radice non configurata",
-        description: "Configura la cartella radice OneDrive nelle impostazioni prima di creare una commessa",
         variant: "destructive",
       });
       return;
@@ -212,25 +124,14 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
     createProjectMutation.mutate(data);
   };
 
-  const onSubmitWithoutOneDrive = (data: FormData) => {
-    if (!generatedCode) {
-      toast({
-        title: "Codice mancante",
-        description: "Generare prima il codice commessa",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    createProjectOnlyMutation.mutate(data);
-  };
-
-  const handleCreateWithOneDrive = () => {
-    form.handleSubmit(onSubmitWithOneDrive)();
-  };
-
-  const handleCreateWithoutOneDrive = () => {
-    form.handleSubmit(onSubmitWithoutOneDrive)();
+  const onError = (errors: any) => {
+    console.error('Form validation errors:', errors);
+    const firstError = Object.values(errors)[0] as any;
+    toast({
+      title: "Errore di validazione",
+      description: firstError?.message || "Controlla i campi del form",
+      variant: "destructive",
+    });
   };
 
   return (
@@ -393,7 +294,54 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
             </Select>
           </div>
         </div>
-        
+
+        {/* Nuova sezione: Tipologia Intervento e Budget */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <div>
+            <Label className="block text-sm font-semibold text-gray-700 mb-2">
+              Tipologia Intervento *
+            </Label>
+            <Select
+              onValueChange={(value) => form.setValue("tipoIntervento", value as "professionale" | "realizzativo")}
+              defaultValue={form.getValues("tipoIntervento")}
+              data-testid="select-tipo-intervento"
+            >
+              <SelectTrigger className="input-g2">
+                <SelectValue placeholder="Seleziona tipologia..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="professionale">📋 Professionale - Consulenza, progettazione</SelectItem>
+                <SelectItem value="realizzativo">🏗️ Realizzativo - Lavori, costruzione</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500 mt-1">
+              Professionale: solo servizi. Realizzativo: include lavori/opere.
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="budget" className="block text-sm font-semibold text-gray-700 mb-2">
+              Budget Iniziale
+              <span className="ml-1 text-xs text-gray-500 font-normal">(opzionale)</span>
+            </Label>
+            <Input
+              id="budget"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Es. 50000.00"
+              className="input-g2"
+              data-testid="input-budget"
+              {...form.register("budget", {
+                valueAsNumber: true,
+                setValueAs: (v) => v === '' ? undefined : parseFloat(v)
+              })}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Budget preventivato per la commessa (in euro)
+            </p>
+          </div>
+        </div>
+
         <div>
           <Label className="block text-sm font-semibold text-gray-700 mb-2">
             Codice Commessa
@@ -401,10 +349,10 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
           <div className="flex gap-3">
             <Input
               readOnly
-              value={generatedCode}
               placeholder="Generato automaticamente..."
               className="flex-1 input-g2 bg-gray-50 text-gray-600 font-mono"
               data-testid="input-generated-code"
+              {...form.register("code")}
             />
             <Button
               type="button"
@@ -417,140 +365,18 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
             </Button>
           </div>
         </div>
-        
-        {/* OneDrive Configuration Status */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
-            <Cloud className="w-5 h-5" />
-            Stato OneDrive
-          </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-blue-700">Connessione OneDrive:</span>
-              <div className="flex items-center gap-2">
-                {isLoadingConfig ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                ) : isConnected ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="font-medium text-green-600" data-testid="onedrive-connection-status">Connesso</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                    <span className="font-medium text-red-600" data-testid="onedrive-connection-status">Non connesso</span>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-blue-700">Cartella radice configurata:</span>
-              <div className="flex items-center gap-2">
-                {isLoadingConfig ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                ) : isRootConfigured ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="font-medium text-green-600" data-testid="root-folder-status">
-                      {rootConfig?.folderName || 'Configurata'}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                    <span className="font-medium text-red-600" data-testid="root-folder-status">Non configurata</span>
-                  </>
-                )}
-              </div>
-            </div>
-            {!isConnected || !isRootConfigured ? (
-              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                <p className="text-yellow-800 text-sm mb-2">
-                  ⚠️ {!isConnected ? 'OneDrive deve essere connesso' : 'La cartella radice deve essere configurata'} prima di creare una commessa.
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleNavigateToOneDriveSettings}
-                  className="text-yellow-800 border-yellow-300"
-                  data-testid="button-configure-onedrive"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Configura OneDrive
-                </Button>
-              </div>
-            ) : (
-              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
-                <p className="text-green-800 text-sm flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4" />
-                  OneDrive configurato correttamente. La commessa sarà creata in: <span className="font-mono text-xs">{rootConfig?.folderPath}</span>
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Creation Progress */}
-        {creationStep && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-3">
-              <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-              <span className="font-medium text-blue-900" data-testid="creation-progress">{creationStep}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Success State */}
-        {createdFolderPath && !createProjectMutation.isPending && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-green-900 mb-2">Commessa creata con successo!</h4>
-                <p className="text-sm text-green-700 mb-3">
-                  La cartella è stata creata su OneDrive con la struttura template.
-                </p>
-                <div className="flex items-center gap-2">
-                  <FolderOpen className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-mono text-green-800" data-testid="created-folder-path">{createdFolderPath}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="border-t pt-6">
           <div className="flex flex-wrap gap-3">
-            {/* OneDrive Creation Button */}
+            {/* Create Project Button */}
             <Button
               type="button"
-              onClick={handleCreateWithOneDrive}
-              disabled={createProjectMutation.isPending || createProjectOnlyMutation.isPending || !generatedCode || !isConnected || !isRootConfigured}
+              onClick={form.handleSubmit(onSubmit, onError)}
+              disabled={createProjectMutation.isPending || !form.watch("code")}
               className="px-8 py-3 bg-g2-success text-white rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
-              data-testid="button-save-project-onedrive"
+              data-testid="button-save-project"
             >
               {createProjectMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creando...
-                </>
-              ) : (
-                <>
-                  <Cloud className="w-4 h-4 mr-2" />
-                  Crea Commessa OneDrive
-                </>
-              )}
-            </Button>
-            
-            {/* Database Only Creation Button */}
-            <Button
-              type="button"
-              onClick={handleCreateWithoutOneDrive}
-              disabled={createProjectMutation.isPending || createProjectOnlyMutation.isPending || !generatedCode}
-              className="px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
-              data-testid="button-save-project-only"
-            >
-              {createProjectOnlyMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Creando...
@@ -562,33 +388,21 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
                 </>
               )}
             </Button>
-            
+
             {/* Reset Button */}
             <Button
               type="reset"
               variant="outline"
-              disabled={createProjectMutation.isPending || createProjectOnlyMutation.isPending}
+              disabled={createProjectMutation.isPending}
               onClick={() => {
                 form.reset();
                 setGeneratedCode("");
-                setCreationStep("");
-                setCreatedFolderPath("");
               }}
               className="px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
               data-testid="button-reset-form"
             >
               Cancella
             </Button>
-          </div>
-          
-          {/* Help Text */}
-          <div className="mt-4 text-sm text-gray-600">
-            <p className="mb-2">
-              <strong>Crea Commessa OneDrive:</strong> Crea la commessa con cartella OneDrive automatica (richiede OneDrive configurato)
-            </p>
-            <p>
-              <strong>Crea Commessa:</strong> Crea solo la commessa nel database, potrai associare OneDrive successivamente
-            </p>
           </div>
         </div>
       </form>

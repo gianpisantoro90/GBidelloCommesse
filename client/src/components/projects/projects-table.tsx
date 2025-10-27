@@ -22,8 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { type Project, type OneDriveMapping, type ProjectMetadata, type Communication, type Deadline } from "@shared/schema";
-import { useOneDriveSync } from "@/hooks/use-onedrive-sync";
+import { type Project, type ProjectMetadata, type Communication, type Deadline } from "@shared/schema";
 import EditProjectForm from "./edit-project-form";
 import PrestazioniModal from "./prestazioni-modal";
 import FatturazioneModal from "./fatturazione-modal";
@@ -42,6 +41,7 @@ export default function ProjectsTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [yearFilter, setYearFilter] = useState<string>("all");
+  const [tipoInterventoFilter, setTipoInterventoFilter] = useState<string>("all");
   const [selectedProjectForPrestazioni, setSelectedProjectForPrestazioni] = useState<Project | null>(null);
   const [selectedProjectForFatturazione, setSelectedProjectForFatturazione] = useState<Project | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -52,7 +52,6 @@ export default function ProjectsTable() {
   const [showFatturazione, setShowFatturazione] = useState(true);
   const [showComunicazioni, setShowComunicazioni] = useState(true);
   const [showScadenze, setShowScadenze] = useState(true);
-  const [showOneDrive, setShowOneDrive] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -71,22 +70,10 @@ export default function ProjectsTable() {
     queryKey: ["/api/deadlines"],
   });
 
-  // OneDrive integration
-  const { data: oneDriveMappings = [] } = useQuery<OneDriveMapping[]>({
-    queryKey: ["/api/onedrive/mappings"],
-  });
-
-  const {
-    isConnected: isOneDriveConnected,
-    syncProject,
-    getSyncStatus,
-    isSyncing
-  } = useOneDriveSync();
-
   const deleteProjectMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest("DELETE", `/api/projects/${id}`);
-      return response.json();
+      await apiRequest("DELETE", `/api/projects/${id}`);
+      return { success: true };
     },
     onSuccess: () => {
       toast({
@@ -95,7 +82,6 @@ export default function ProjectsTable() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/onedrive/mappings"] });
     },
     onError: () => {
       toast({
@@ -123,7 +109,10 @@ export default function ProjectsTable() {
     // Year filter
     const matchesYear = yearFilter === "all" || project.year === parseInt(yearFilter);
 
-    return matchesSearch && matchesStatus && matchesYear;
+    // Tipo Intervento filter
+    const matchesTipoIntervento = tipoInterventoFilter === "all" || project.tipoIntervento === tipoInterventoFilter;
+
+    return matchesSearch && matchesStatus && matchesYear && matchesTipoIntervento;
   });
 
   const handleDeleteProject = (project: Project) => {
@@ -177,59 +166,6 @@ export default function ProjectsTable() {
       .filter(deadline => new Date(deadline.dueDate) >= now)
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     return projectDeadlines[0];
-  };
-
-  // OneDrive helper functions
-  const getOneDriveMapping = (projectCode: string): OneDriveMapping | undefined => {
-    return oneDriveMappings.find(mapping => mapping.projectCode === projectCode);
-  };
-
-  const getOneDriveStatus = (project: Project) => {
-    const mapping = getOneDriveMapping(project.code);
-    const syncStatus = getSyncStatus(project.id);
-    
-    if (!isOneDriveConnected) {
-      return { status: 'disconnected', label: 'OneDrive non collegato', icon: '🔌', color: 'text-gray-500' };
-    }
-    
-    if (syncStatus.status === 'pending') {
-      return { status: 'syncing', label: 'In sincronizzazione...', icon: '🔄', color: 'text-blue-600' };
-    }
-    
-    if (syncStatus.status === 'error') {
-      return { status: 'error', label: 'Errore sync', icon: '❌', color: 'text-red-600' };
-    }
-    
-    if (!mapping) {
-      return { status: 'not_configured', label: 'Non configurato', icon: '⚠️', color: 'text-yellow-600' };
-    }
-    
-    return { status: 'synced', label: 'Sincronizzato', icon: '✅', color: 'text-green-600' };
-  };
-
-  const handleConfigureOneDrive = (project: Project) => {
-    if (!isOneDriveConnected) {
-      toast({
-        title: "OneDrive non collegato",
-        description: "Configura prima la connessione OneDrive nelle impostazioni",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    syncProject(project.id);
-  };
-
-  const handleOpenOneDriveFolder = (mapping: OneDriveMapping) => {
-    // Construct OneDrive web URL
-    const oneDriveBaseUrl = "https://onedrive.live.com/?id=";
-    const folderUrl = `${oneDriveBaseUrl}${mapping.oneDriveFolderId}&cid=${mapping.oneDriveFolderId}`;
-    window.open(folderUrl, '_blank');
-    
-    toast({
-      title: "OneDrive aperto",
-      description: `Cartella ${mapping.oneDriveFolderName} aperta in OneDrive`,
-    });
   };
 
   if (isLoading) {
@@ -317,14 +253,6 @@ export default function ProjectsTable() {
           >
             📅 Scadenze
           </Button>
-          <Button
-            size="sm"
-            variant={showOneDrive ? "default" : "outline"}
-            onClick={() => setShowOneDrive(!showOneDrive)}
-            className="text-xs"
-          >
-            ☁️ OneDrive
-          </Button>
         </div>
 
         {/* Filters Row */}
@@ -366,13 +294,25 @@ export default function ProjectsTable() {
             </SelectContent>
           </Select>
 
-          {(statusFilter !== "all" || yearFilter !== "all" || searchTerm !== "") && (
+          <Select value={tipoInterventoFilter} onValueChange={setTipoInterventoFilter}>
+            <SelectTrigger className="w-[180px]" data-testid="filter-tipo-intervento">
+              <SelectValue placeholder="Tipo intervento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutti i tipi</SelectItem>
+              <SelectItem value="professionale">📋 Professionale</SelectItem>
+              <SelectItem value="realizzativo">🏗️ Realizzativo</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {(statusFilter !== "all" || yearFilter !== "all" || tipoInterventoFilter !== "all" || searchTerm !== "") && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 setStatusFilter("all");
                 setYearFilter("all");
+                setTipoInterventoFilter("all");
                 setSearchTerm("");
               }}
               className="text-gray-500 hover:text-gray-700"
@@ -450,9 +390,6 @@ export default function ProjectsTable() {
                       Prossima Scadenza
                       <span className="ml-1 text-xs text-gray-500 cursor-help" title="Prossima scadenza in programma">ⓘ</span>
                     </th>
-                  )}
-                  {showOneDrive && (
-                    <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm w-48">OneDrive</th>
                   )}
                   <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm rounded-tr-lg w-32">Azioni</th>
                 </tr>
@@ -708,68 +645,6 @@ export default function ProjectsTable() {
                                 {dueDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                 {daysUntil <= 7 && <span className="ml-1">⚠️ {daysUntil}gg</span>}
                               </div>
-                            </div>
-                          );
-                        })()}
-                      </td>
-                    )}
-                    {showOneDrive && (
-                      <td className="py-4 px-4" data-testid={`project-onedrive-${project.id}`}>
-                        {(() => {
-                          const mapping = getOneDriveMapping(project.code);
-                          const status = getOneDriveStatus(project);
-
-                          return (
-                            <div className="flex items-center gap-2">
-                              <span className={`text-sm ${status.color}`} title={status.label}>
-                                {status.icon}
-                              </span>
-
-                              {mapping ? (
-                                <div className="flex flex-col gap-1 min-w-0">
-                                  <button
-                                    onClick={() => handleOpenOneDriveFolder(mapping)}
-                                    className="text-blue-600 hover:text-blue-800 text-xs underline text-left truncate"
-                                    title={`Apri cartella: ${mapping.oneDriveFolderPath}`}
-                                    data-testid={`onedrive-link-${project.id}`}
-                                  >
-                                    📁 {mapping.oneDriveFolderName}
-                                  </button>
-                                  <span className="text-xs text-gray-500 truncate" title={mapping.oneDriveFolderPath}>
-                                    {mapping.oneDriveFolderPath}
-                                  </span>
-                                </div>
-                              ) : (
-                                <div className="flex flex-col gap-1 min-w-0">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleConfigureOneDrive(project)}
-                                    disabled={!isOneDriveConnected || isSyncing}
-                                    className="text-xs h-6 px-2 whitespace-nowrap"
-                                    title={!isOneDriveConnected ? "OneDrive non collegato" : "Configura OneDrive per questo progetto"}
-                                    data-testid={`configure-onedrive-${project.id}`}
-                                  >
-                                    {isSyncing ? '🔄' : '⚙️'} Configura
-                                  </Button>
-                                  <span className="text-xs text-gray-400 truncate">
-                                    Non configurato
-                                  </span>
-                                </div>
-                              )}
-
-                              {status.status === 'error' && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleConfigureOneDrive(project)}
-                                  className="text-xs h-6 px-1 text-orange-600 hover:text-orange-800"
-                                  title="Riprova sincronizzazione"
-                                  data-testid={`retry-sync-${project.id}`}
-                                >
-                                  🔄
-                                </Button>
-                              )}
                             </div>
                           );
                         })()}

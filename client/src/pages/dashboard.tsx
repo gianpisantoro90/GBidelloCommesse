@@ -3,7 +3,6 @@ import Header from "@/components/layout/header";
 import TabNavigation from "@/components/layout/tab-navigation";
 import StatsCard from "@/components/dashboard/stats-card";
 import RecentProjectsTable from "@/components/dashboard/recent-projects-table";
-import OneDriveStatusCard from "@/components/dashboard/onedrive-status-card";
 import EconomicDashboardCard from "@/components/dashboard/economic-dashboard-card";
 import NewProjectForm from "@/components/projects/new-project-form";
 import FolderStructureCard from "@/components/projects/folder-structure-card";
@@ -14,19 +13,26 @@ import Scadenzario from "@/components/projects/scadenzario";
 import RegistroComunicazioni from "@/components/projects/registro-comunicazioni";
 import GestioneRisorse from "@/components/projects/gestione-risorse";
 import KpiDashboard from "@/components/projects/kpi-dashboard";
-import BulkRenameForm from "@/components/routing/bulk-rename-form";
-import BulkRenameResults from "@/components/routing/bulk-rename-results";
-import OneDriveAutoRouting from "@/components/routing/onedrive-auto-routing";
+import FattureIngresso from "@/components/projects/fatture-ingresso";
+import CostiVivi from "@/components/projects/costi-vivi";
+import CentroCostoDashboard from "@/components/projects/centro-costo-dashboard";
 import StoragePanel from "@/components/system/storage-panel";
-import AiConfigPanel from "@/components/system/ai-config-panel";
-import FolderConfigPanel from "@/components/system/folder-config-panel";
-import OneDrivePanel from "@/components/system/onedrive-panel";
-import OneDriveFileRouter from "@/components/onedrive/onedrive-file-router";
-import OneDriveBrowser from "@/components/onedrive/onedrive-browser";
+import UsersManagement from "@/components/system/users-management";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type Project } from "@shared/schema";
+import { User } from "@/hooks/useAuth";
 
-export default function Dashboard() {
+interface DashboardProps {
+  user: User | null;
+  onLogout: () => void;
+}
+
+export default function Dashboard({ user, onLogout }: DashboardProps) {
+  // DEBUG: Log user info
+  console.log("Dashboard - User object:", user);
+  console.log("Dashboard - User role:", user?.role);
+  console.log("Dashboard - Is admin?:", user?.role === "amministratore");
+
   const [activeTab, setActiveTab] = useState("dashboard");
   const [activeSubTab, setActiveSubTab] = useState({
     gestione: "progetti",
@@ -34,26 +40,14 @@ export default function Dashboard() {
     vista: "tabella"
   });
   const [pendingProject, setPendingProject] = useState(null);
-  
-  // Routing state
-  const [bulkRenameResults, setBulkRenameResults] = useState<Array<{original: string, renamed: string}> | null>(null);
 
   const handleSubTabChange = (mainTab: string, subTab: string) => {
     setActiveSubTab(prev => ({ ...prev, [mainTab]: subTab }));
   };
-  
-
-  const handleBulkRenameComplete = (results: Array<{original: string, renamed: string}>) => {
-    setBulkRenameResults(results);
-  };
-
-  const handleClearBulkRename = () => {
-    setBulkRenameResults(null);
-  };
 
   return (
     <div className="min-h-screen bg-g2-accent">
-      <Header />
+      <Header user={user} onLogout={onLogout} />
       
       <div className="max-w-7xl mx-auto">
         <TabNavigation 
@@ -73,9 +67,8 @@ export default function Dashboard() {
                 <RecentProjectsTable />
 
                 {/* Third Row - Core System Info */}
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-6 lg:grid-cols-1">
                   <StatsCard />
-                  <OneDriveStatusCard />
                 </div>
               </div>
             )}
@@ -87,13 +80,6 @@ export default function Dashboard() {
                   <div className="bg-white rounded-t-2xl border-b border-gray-200 overflow-x-auto">
                     <TabsList className="inline-flex w-auto min-w-full bg-transparent border-0 p-0">
                       <TabsTrigger
-                        value="nuova"
-                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-nuova"
-                      >
-                        ➕ Nuova
-                      </TabsTrigger>
-                      <TabsTrigger
                         value="progetti"
                         className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
                         data-testid="tab-progetti"
@@ -101,11 +87,48 @@ export default function Dashboard() {
                         📋 Commesse
                       </TabsTrigger>
                       <TabsTrigger
-                        value="clienti"
+                        value="nuova"
                         className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-clienti"
+                        data-testid="tab-nuova"
                       >
-                        👥 Clienti
+                        ➕ Nuova
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="centro-costo"
+                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
+                        data-testid="tab-centro-costo"
+                      >
+                        💰 Centro Costo
+                      </TabsTrigger>
+                      {user?.role === "amministratore" && (
+                        <TabsTrigger
+                          value="fatture-ingresso"
+                          className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
+                          data-testid="tab-fatture-ingresso"
+                        >
+                          📥 Fatt. Ingresso
+                        </TabsTrigger>
+                      )}
+                      <TabsTrigger
+                        value="costi-vivi"
+                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
+                        data-testid="tab-costi-vivi"
+                      >
+                        💳 Costi Vivi
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="scadenzario"
+                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
+                        data-testid="tab-scadenzario"
+                      >
+                        📅 Scadenze
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="comunicazioni"
+                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
+                        data-testid="tab-comunicazioni"
+                      >
+                        💬 Comunicazioni
                       </TabsTrigger>
                       <TabsTrigger
                         value="risorse"
@@ -113,6 +136,13 @@ export default function Dashboard() {
                         data-testid="tab-risorse"
                       >
                         👷 Risorse
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="clienti"
+                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
+                        data-testid="tab-clienti"
+                      >
+                        👥 Clienti
                       </TabsTrigger>
                       <TabsTrigger
                         value="kpi"
@@ -127,20 +157,6 @@ export default function Dashboard() {
                         data-testid="tab-parcella"
                       >
                         💰 Calc. Parcella
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="scadenzario"
-                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-scadenzario"
-                      >
-                        📅 Scadenze
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="comunicazioni"
-                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-comunicazioni"
-                      >
-                        💬 Comun.
                       </TabsTrigger>
                     </TabsList>
                   </div>
@@ -168,7 +184,21 @@ export default function Dashboard() {
                   <TabsContent value="comunicazioni" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
                     <RegistroComunicazioni />
                   </TabsContent>
-                  
+
+                  {user?.role === "amministratore" && (
+                    <TabsContent value="fatture-ingresso" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
+                      <FattureIngresso />
+                    </TabsContent>
+                  )}
+
+                  <TabsContent value="costi-vivi" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
+                    <CostiVivi />
+                  </TabsContent>
+
+                  <TabsContent value="centro-costo" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
+                    <CentroCostoDashboard />
+                  </TabsContent>
+
                   <TabsContent value="nuova" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
                     <div className="max-w-2xl mx-auto space-y-6">
                       <NewProjectForm 
@@ -187,38 +217,6 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Auto-Routing Panel */}
-            {activeTab === "routing" && (
-              <div className="max-w-6xl mx-auto space-y-6" data-testid="routing-panel">
-                <div className="grid gap-6 lg:grid-cols-1">
-                  {/* New OneDrive Auto-Routing System */}
-                  <OneDriveAutoRouting />
-                  
-                  {/* Bulk Rename Tool */}
-                  <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">🔄 Rinomina File in Massa</h3>
-                    <p className="text-gray-600 mb-4">
-                      Strumento per rinominare file in massa con pattern personalizzati.
-                    </p>
-                    <BulkRenameForm onRenameComplete={handleBulkRenameComplete} />
-                  </div>
-                </div>
-                
-                {bulkRenameResults && (
-                  <BulkRenameResults 
-                    results={bulkRenameResults}
-                    onClear={handleClearBulkRename}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* OneDrive Browser Panel */}
-            {activeTab === "onedrive" && (
-              <div data-testid="onedrive-browser-panel">
-                <OneDriveBrowser />
-              </div>
-            )}
 
             {/* System Panel */}
             {activeTab === "sistema" && (
@@ -226,58 +224,34 @@ export default function Dashboard() {
                 <Tabs value={activeSubTab.sistema} onValueChange={(value) => handleSubTabChange("sistema", value)}>
                   <div className="bg-white rounded-t-2xl border-b border-gray-200">
                     <TabsList className="flex w-full bg-transparent border-0 p-0">
-                      <TabsTrigger 
-                        value="storage" 
+                      <TabsTrigger
+                        value="storage"
                         className="px-6 py-4 text-sm font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none"
                         data-testid="tab-storage"
                       >
                         💾 Storage
                       </TabsTrigger>
-                      <TabsTrigger 
-                        value="ai" 
-                        className="px-6 py-4 text-sm font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none"
-                        data-testid="tab-ai"
-                      >
-                        🤖 Configurazione AI
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value="onedrive" 
-                        className="px-6 py-4 text-sm font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none"
-                        data-testid="tab-onedrive"
-                      >
-                        ☁️ OneDrive Config
-                      </TabsTrigger>
+                      {user?.role === "amministratore" && (
+                        <TabsTrigger
+                          value="users"
+                          className="px-6 py-4 text-sm font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none"
+                          data-testid="tab-users"
+                        >
+                          👥 Gestione Utenti
+                        </TabsTrigger>
+                      )}
                     </TabsList>
                   </div>
                   
                   <TabsContent value="storage" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
                     <StoragePanel />
                   </TabsContent>
-                  
-                  <TabsContent value="ai" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                    <AiConfigPanel />
-                  </TabsContent>
-                  
-                  
-                  <TabsContent value="onedrive" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                    <div className="space-y-8">
-                      {/* Sezione Cartelle */}
-                      <div className="border-b border-gray-200 pb-8">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                          📁 Gestione Cartelle
-                        </h3>
-                        <FolderConfigPanel />
-                      </div>
-                      
-                      {/* Sezione Configurazione OneDrive */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                          ⚙️ Configurazione OneDrive
-                        </h3>
-                        <OneDrivePanel />
-                      </div>
-                    </div>
-                  </TabsContent>
+
+                  {user?.role === "amministratore" && (
+                    <TabsContent value="users" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
+                      <UsersManagement />
+                    </TabsContent>
+                  )}
                 </Tabs>
               </div>
             )}

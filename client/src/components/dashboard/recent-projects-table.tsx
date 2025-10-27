@@ -1,22 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { type Project } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useOneDriveSync } from "@/hooks/use-onedrive-sync";
-import { Cloud, CloudOff, RefreshCw, AlertTriangle, CheckCircle } from "lucide-react";
 
 export default function RecentProjectsTable() {
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
   });
-
-  const { isConnected, getSyncStatus } = useOneDriveSync();
-  
-  // Get OneDrive mappings to check if projects are already synced
-  const { data: oneDriveMappings } = useQuery({
-    queryKey: ["/api/onedrive/mappings"],
-    enabled: isConnected
-  }) as { data: any[] | undefined };
 
   // Get the 3 most recent projects
   const recentProjects = projects
@@ -27,74 +16,17 @@ export default function RecentProjectsTable() {
     // Use the actual status from database to match the Gestione tab
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-        project.status === 'in_corso' 
-          ? 'bg-yellow-100 text-yellow-800' 
+        project.status === 'in_corso'
+          ? 'bg-yellow-100 text-yellow-800'
           : project.status === 'conclusa'
           ? 'bg-green-100 text-green-800'
           : 'bg-red-100 text-red-800'
       }`}>
-        {project.status === 'in_corso' ? '🟡 In Corso' : 
-         project.status === 'conclusa' ? '🟢 Conclusa' : 
+        {project.status === 'in_corso' ? '🟡 In Corso' :
+         project.status === 'conclusa' ? '🟢 Conclusa' :
          '🔴 Sospesa'}
       </span>
     );
-  };
-
-  const getOneDriveSyncIndicator = (project: Project) => {
-    if (!isConnected) {
-      return (
-        <div className="flex items-center space-x-1 text-gray-400" title="OneDrive non configurato">
-          <Cloud className="h-3 w-3 opacity-50" />
-        </div>
-      );
-    }
-
-    const syncStatus = getSyncStatus(project.id);
-    
-    // Check if project has OneDrive mapping (already synced on server)
-    const hasOneDriveMapping = oneDriveMappings && Array.isArray(oneDriveMappings) 
-      ? oneDriveMappings.some(mapping => mapping.projectCode === project.code)
-      : false;
-    
-    switch (syncStatus.status) {
-      case 'synced':
-        return (
-          <div className="flex items-center space-x-1 text-green-600" title="Sincronizzato con OneDrive">
-            <Cloud className="h-3 w-3" />
-            <CheckCircle className="h-3 w-3" />
-          </div>
-        );
-      case 'pending':
-        return (
-          <div className="flex items-center space-x-1 text-blue-600" title="Sincronizzazione in corso">
-            <Cloud className="h-3 w-3" />
-            <RefreshCw className="h-3 w-3 animate-spin" />
-          </div>
-        );
-      case 'error':
-        return (
-          <div className="flex items-center space-x-1 text-red-600" title={`Errore: ${syncStatus.error || 'Sincronizzazione fallita'}`}>
-            <Cloud className="h-3 w-3" />
-            <AlertTriangle className="h-3 w-3" />
-          </div>
-        );
-      default:
-        // If no local sync status but has OneDrive mapping, show as synced
-        if (hasOneDriveMapping) {
-          return (
-            <div className="flex items-center space-x-1 text-green-600" title="Sincronizzato con OneDrive">
-              <Cloud className="h-3 w-3" />
-              <CheckCircle className="h-3 w-3" />
-            </div>
-          );
-        }
-        // Otherwise, not synced yet
-        return (
-          <div className="flex items-center space-x-1 text-gray-400" title="Non ancora sincronizzato">
-            <Cloud className="h-3 w-3 opacity-50" />
-          </div>
-        );
-    }
   };
 
   return (
@@ -122,7 +54,6 @@ export default function RecentProjectsTable() {
                 <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Città</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Oggetto</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Status</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">☁️</th>
               </tr>
             </thead>
             <tbody>
@@ -142,9 +73,6 @@ export default function RecentProjectsTable() {
                   </td>
                   <td className="py-3 px-4" data-testid={`project-status-${project.id}`}>
                     {getStatusBadge(project)}
-                  </td>
-                  <td className="py-3 px-4 text-center" data-testid={`project-onedrive-${project.id}`}>
-                    {getOneDriveSyncIndicator(project)}
                   </td>
                 </tr>
               ))}
