@@ -37,13 +37,14 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(publicPath, 'index.html'));
   });
 } else {
-  // In development, proxy non-API requests to Vite dev server
-  app.use(createProxyMiddleware({
+  // In development, proxy all non-API requests to Vite dev server
+  const viteProxy = createProxyMiddleware({
     target: 'http://localhost:5173',
     changeOrigin: true,
     ws: true,
-    filter: (pathname) => !pathname.startsWith('/api'),
-  }));
+  });
+  
+  app.use(viteProxy);
 }
 
 // Error handling middleware
