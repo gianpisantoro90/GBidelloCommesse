@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from 'express';
 import { router } from './routes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,7 +28,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // API Routes
 app.use(router);
 
-// Serve static files in production
+// Serve static files in production or proxy to Vite in development
 if (process.env.NODE_ENV === 'production') {
   const publicPath = path.join(__dirname, '..', 'dist', 'public');
   app.use(express.static(publicPath));
@@ -35,6 +36,14 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (req: Request, res: Response) => {
     res.sendFile(path.join(publicPath, 'index.html'));
   });
+} else {
+  // In development, proxy non-API requests to Vite dev server
+  app.use(createProxyMiddleware({
+    target: 'http://localhost:5173',
+    changeOrigin: true,
+    ws: true,
+    filter: (pathname) => !pathname.startsWith('/api'),
+  }));
 }
 
 // Error handling middleware
