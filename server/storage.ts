@@ -94,7 +94,12 @@ import type {
   Tag,
   ProjectTag,
   FileRouting,
-  ProjectResource
+  ProjectResource,
+  ActivityLog,
+  ProfiloCosto,
+  FatturaEmessa,
+  FatturaConsulente,
+  CostoGenerale
 } from '@shared/schema';
 
 export const projectsStorage = new JSONFileStorage<Project>('projects.json');
@@ -109,3 +114,10 @@ export const tagsStorage = new JSONFileStorage<Tag>('tags.json');
 export const projectTagsStorage = new JSONFileStorage<ProjectTag & { id: string }>('project-tags.json');
 export const fileRoutingsStorage = new JSONFileStorage<FileRouting>('file-routings.json');
 export const projectResourcesStorage = new JSONFileStorage<ProjectResource>('project-resources.json');
+
+// Nuovi storage
+export const activityLogsStorage = new JSONFileStorage<ActivityLog>('activity-logs.json');
+export const profiliCostoStorage = new JSONFileStorage<ProfiloCosto>('profili-costo.json');
+export const fattureEmesseStorage = new JSONFileStorage<FatturaEmessa>('fatture-emesse.json');
+export const fattureConsulentiStorage = new JSONFileStorage<FatturaConsulente>('fatture-consulenti.json');
+export const costiGeneraliStorage = new JSONFileStorage<CostoGenerale>('costi-generali.json');

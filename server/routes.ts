@@ -12,7 +12,12 @@ import {
   tagsStorage,
   projectTagsStorage,
   fileRoutingsStorage,
-  projectResourcesStorage
+  projectResourcesStorage,
+  activityLogsStorage,
+  profiliCostoStorage,
+  fattureEmesseStorage,
+  fattureConsulentiStorage,
+  costiGeneraliStorage
 } from './storage.js';
 
 import type {
@@ -25,7 +30,12 @@ import type {
   InsertScadenza,
   InsertComunicazione,
   InsertTag,
-  InsertProjectResource
+  InsertProjectResource,
+  InsertActivityLog,
+  InsertProfiloCosto,
+  InsertFatturaEmessa,
+  InsertFatturaConsulente,
+  InsertCostoGenerale
 } from '@shared/schema';
 
 export const router = Router();
@@ -742,5 +752,546 @@ router.get('/api/onedrive/mappings', async (req, res) => {
     res.json([]);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch OneDrive mappings' });
+  }
+});
+
+// ============================================================================
+// Activity Logs Routes (Log personale utente)
+// ============================================================================
+router.get('/api/activity-logs', async (req, res) => {
+  try {
+    const logs = await activityLogsStorage.readAll();
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch activity logs' });
+  }
+});
+
+router.get('/api/activity-logs/user/:userId', async (req, res) => {
+  try {
+    const logs = await activityLogsStorage.findByField('userId', req.params.userId);
+    // Ordina per timestamp decrescente
+    logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch user activity logs' });
+  }
+});
+
+router.post('/api/activity-logs', async (req, res) => {
+  try {
+    const logData: InsertActivityLog = req.body;
+    const log = {
+      id: randomUUID(),
+      ...logData,
+      timestamp: logData.timestamp || new Date().toISOString()
+    };
+    await activityLogsStorage.create(log);
+    res.status(201).json(log);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create activity log' });
+  }
+});
+
+// ============================================================================
+// Profili Costo Orario Routes (solo ADMIN)
+// ============================================================================
+router.get('/api/profili-costo', async (req, res) => {
+  try {
+    const profili = await profiliCostoStorage.readAll();
+    res.json(profili);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch profili costo' });
+  }
+});
+
+router.get('/api/profili-costo/:id', async (req, res) => {
+  try {
+    const profilo = await profiliCostoStorage.findById(req.params.id);
+    if (!profilo) {
+      return res.status(404).json({ error: 'Profilo not found' });
+    }
+    res.json(profilo);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch profilo' });
+  }
+});
+
+router.post('/api/profili-costo', async (req, res) => {
+  try {
+    const profiloData: InsertProfiloCosto = req.body;
+    const profilo = {
+      id: randomUUID(),
+      ...profiloData
+    };
+    await profiliCostoStorage.create(profilo);
+    res.status(201).json(profilo);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create profilo' });
+  }
+});
+
+router.put('/api/profili-costo/:id', async (req, res) => {
+  try {
+    const updates: Partial<InsertProfiloCosto> = req.body;
+    const updated = await profiliCostoStorage.update(req.params.id, updates);
+    if (!updated) {
+      return res.status(404).json({ error: 'Profilo not found' });
+    }
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update profilo' });
+  }
+});
+
+router.delete('/api/profili-costo/:id', async (req, res) => {
+  try {
+    const deleted = await profiliCostoStorage.delete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Profilo not found' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete profilo' });
+  }
+});
+
+// ============================================================================
+// Fatture Emesse Routes (solo ADMIN)
+// ============================================================================
+router.get('/api/fatture-emesse', async (req, res) => {
+  try {
+    const fatture = await fattureEmesseStorage.readAll();
+    res.json(fatture);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch fatture emesse' });
+  }
+});
+
+router.get('/api/fatture-emesse/:id', async (req, res) => {
+  try {
+    const fattura = await fattureEmesseStorage.findById(req.params.id);
+    if (!fattura) {
+      return res.status(404).json({ error: 'Fattura not found' });
+    }
+    res.json(fattura);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch fattura' });
+  }
+});
+
+router.get('/api/fatture-emesse/project/:projectId', async (req, res) => {
+  try {
+    const fatture = await fattureEmesseStorage.findByField('projectId', req.params.projectId);
+    res.json(fatture);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch fatture for project' });
+  }
+});
+
+router.post('/api/fatture-emesse', async (req, res) => {
+  try {
+    const fatturaData: InsertFatturaEmessa = req.body;
+    const fattura = {
+      id: randomUUID(),
+      ...fatturaData
+    };
+    await fattureEmesseStorage.create(fattura);
+    res.status(201).json(fattura);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create fattura' });
+  }
+});
+
+router.put('/api/fatture-emesse/:id', async (req, res) => {
+  try {
+    const updates: Partial<InsertFatturaEmessa> = req.body;
+    const updated = await fattureEmesseStorage.update(req.params.id, updates);
+    if (!updated) {
+      return res.status(404).json({ error: 'Fattura not found' });
+    }
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update fattura' });
+  }
+});
+
+router.patch('/api/fatture-emesse/:id', async (req, res) => {
+  try {
+    const updates: Partial<InsertFatturaEmessa> = req.body;
+    const updated = await fattureEmesseStorage.update(req.params.id, updates);
+    if (!updated) {
+      return res.status(404).json({ error: 'Fattura not found' });
+    }
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update fattura' });
+  }
+});
+
+router.delete('/api/fatture-emesse/:id', async (req, res) => {
+  try {
+    const deleted = await fattureEmesseStorage.delete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Fattura not found' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete fattura' });
+  }
+});
+
+// ============================================================================
+// Fatture Consulenti Routes (solo ADMIN visibilità e inserimento)
+// ============================================================================
+router.get('/api/fatture-consulenti', async (req, res) => {
+  try {
+    const fatture = await fattureConsulentiStorage.readAll();
+    res.json(fatture);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch fatture consulenti' });
+  }
+});
+
+router.get('/api/fatture-consulenti/:id', async (req, res) => {
+  try {
+    const fattura = await fattureConsulentiStorage.findById(req.params.id);
+    if (!fattura) {
+      return res.status(404).json({ error: 'Fattura not found' });
+    }
+    res.json(fattura);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch fattura' });
+  }
+});
+
+router.get('/api/fatture-consulenti/project/:projectId', async (req, res) => {
+  try {
+    const fatture = await fattureConsulentiStorage.findByField('projectId', req.params.projectId);
+    res.json(fatture);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch fatture for project' });
+  }
+});
+
+router.post('/api/fatture-consulenti', async (req, res) => {
+  try {
+    const fatturaData: InsertFatturaConsulente = req.body;
+    const fattura = {
+      id: randomUUID(),
+      ...fatturaData
+    };
+    await fattureConsulentiStorage.create(fattura);
+    res.status(201).json(fattura);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create fattura' });
+  }
+});
+
+router.put('/api/fatture-consulenti/:id', async (req, res) => {
+  try {
+    const updates: Partial<InsertFatturaConsulente> = req.body;
+    const updated = await fattureConsulentiStorage.update(req.params.id, updates);
+    if (!updated) {
+      return res.status(404).json({ error: 'Fattura not found' });
+    }
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update fattura' });
+  }
+});
+
+router.patch('/api/fatture-consulenti/:id', async (req, res) => {
+  try {
+    const updates: Partial<InsertFatturaConsulente> = req.body;
+    const updated = await fattureConsulentiStorage.update(req.params.id, updates);
+    if (!updated) {
+      return res.status(404).json({ error: 'Fattura not found' });
+    }
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update fattura' });
+  }
+});
+
+router.delete('/api/fatture-consulenti/:id', async (req, res) => {
+  try {
+    const deleted = await fattureConsulentiStorage.delete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Fattura not found' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete fattura' });
+  }
+});
+
+// ============================================================================
+// Costi Generali Routes
+// ============================================================================
+router.get('/api/costi-generali', async (req, res) => {
+  try {
+    const costi = await costiGeneraliStorage.readAll();
+    res.json(costi);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch costi generali' });
+  }
+});
+
+router.get('/api/costi-generali/:id', async (req, res) => {
+  try {
+    const costo = await costiGeneraliStorage.findById(req.params.id);
+    if (!costo) {
+      return res.status(404).json({ error: 'Costo not found' });
+    }
+    res.json(costo);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch costo' });
+  }
+});
+
+router.post('/api/costi-generali', async (req, res) => {
+  try {
+    const costoData: InsertCostoGenerale = req.body;
+    const costo = {
+      id: randomUUID(),
+      ...costoData
+    };
+    await costiGeneraliStorage.create(costo);
+    res.status(201).json(costo);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create costo' });
+  }
+});
+
+router.put('/api/costi-generali/:id', async (req, res) => {
+  try {
+    const updates: Partial<InsertCostoGenerale> = req.body;
+    const updated = await costiGeneraliStorage.update(req.params.id, updates);
+    if (!updated) {
+      return res.status(404).json({ error: 'Costo not found' });
+    }
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update costo' });
+  }
+});
+
+router.patch('/api/costi-generali/:id', async (req, res) => {
+  try {
+    const updates: Partial<InsertCostoGenerale> = req.body;
+    const updated = await costiGeneraliStorage.update(req.params.id, updates);
+    if (!updated) {
+      return res.status(404).json({ error: 'Costo not found' });
+    }
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update costo' });
+  }
+});
+
+router.delete('/api/costi-generali/:id', async (req, res) => {
+  try {
+    const deleted = await costiGeneraliStorage.delete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Costo not found' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete costo' });
+  }
+});
+
+// ============================================================================
+// Cambio Password Route
+// ============================================================================
+router.post('/api/users/:id/change-password', async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await usersStorage.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    if (user.password !== currentPassword) {
+      return res.status(401).json({ error: 'Password attuale non corretta' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'La nuova password deve avere almeno 6 caratteri' });
+    }
+
+    await usersStorage.update(req.params.id, { password: newPassword });
+    res.json({ success: true, message: 'Password modificata con successo' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// ============================================================================
+// Fatture in Scadenza Route (per promemoria dashboard)
+// ============================================================================
+router.get('/api/fatture-in-scadenza', async (req, res) => {
+  try {
+    const oggi = new Date();
+    const tra30giorni = new Date();
+    tra30giorni.setDate(oggi.getDate() + 30);
+
+    // Fatture ingresso non pagate in scadenza
+    const fattureIngresso = await fattureIngressoStorage.readAll();
+    const fattureIngressoInScadenza = fattureIngresso
+      .filter(f => !f.pagata && new Date(f.dataScadenzaPagamento) <= tra30giorni)
+      .map(f => ({ ...f, tipo: 'ingresso' as const }));
+
+    // Fatture consulenti non pagate in scadenza
+    const fattureConsulenti = await fattureConsulentiStorage.readAll();
+    const fattureConsulentiInScadenza = fattureConsulenti
+      .filter(f => !f.pagata && new Date(f.dataScadenzaPagamento) <= tra30giorni)
+      .map(f => ({ ...f, tipo: 'consulente' as const }));
+
+    // Fatture emesse non incassate in scadenza
+    const fattureEmesse = await fattureEmesseStorage.readAll();
+    const fattureEmesseInScadenza = fattureEmesse
+      .filter(f => !f.incassata && new Date(f.dataScadenzaPagamento) <= tra30giorni)
+      .map(f => ({ ...f, tipo: 'emessa' as const }));
+
+    // Costi generali non pagati in scadenza
+    const costiGenerali = await costiGeneraliStorage.readAll();
+    const costiGeneraliInScadenza = costiGenerali
+      .filter(c => !c.pagato && c.dataScadenza && new Date(c.dataScadenza) <= tra30giorni)
+      .map(c => ({ ...c, tipo: 'costo_generale' as const }));
+
+    const tutteLeScadenze = [
+      ...fattureIngressoInScadenza,
+      ...fattureConsulentiInScadenza,
+      ...fattureEmesseInScadenza,
+      ...costiGeneraliInScadenza
+    ].sort((a, b) => {
+      const dataA = 'dataScadenzaPagamento' in a ? a.dataScadenzaPagamento : a.dataScadenza;
+      const dataB = 'dataScadenzaPagamento' in b ? b.dataScadenzaPagamento : b.dataScadenza;
+      return new Date(dataA!).getTime() - new Date(dataB!).getTime();
+    });
+
+    res.json(tutteLeScadenze);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch fatture in scadenza' });
+  }
+});
+
+// ============================================================================
+// Cash Flow Summary Route
+// ============================================================================
+router.get('/api/cash-flow', async (req, res) => {
+  try {
+    // Fatture emesse (entrate)
+    const fattureEmesse = await fattureEmesseStorage.readAll();
+    const totaleEmesso = fattureEmesse.reduce((acc, f) => acc + f.importoTotale, 0);
+    const totaleIncassato = fattureEmesse.filter(f => f.incassata).reduce((acc, f) => acc + f.importoTotale, 0);
+    const totaleDaIncassare = totaleEmesso - totaleIncassato;
+
+    // Fatture ingresso (uscite)
+    const fattureIngresso = await fattureIngressoStorage.readAll();
+    const totaleFattureIngresso = fattureIngresso.reduce((acc, f) => acc + f.importo, 0);
+    const totaleFattureIngressoPagate = fattureIngresso.filter(f => f.pagata).reduce((acc, f) => acc + f.importo, 0);
+    const totaleFattureIngressoDaPagare = totaleFattureIngresso - totaleFattureIngressoPagate;
+
+    // Fatture consulenti (uscite)
+    const fattureConsulenti = await fattureConsulentiStorage.readAll();
+    const totaleFattureConsulenti = fattureConsulenti.reduce((acc, f) => acc + f.importo, 0);
+    const totaleFattureConsulentiPagate = fattureConsulenti.filter(f => f.pagata).reduce((acc, f) => acc + f.importo, 0);
+    const totaleFattureConsulentiDaPagare = totaleFattureConsulenti - totaleFattureConsulentiPagate;
+
+    // Costi vivi (uscite)
+    const costiVivi = await costiViviStorage.readAll();
+    const totaleCostiVivi = costiVivi.reduce((acc, c) => acc + c.importo, 0);
+
+    // Costi generali (uscite)
+    const costiGenerali = await costiGeneraliStorage.readAll();
+    const totaleCostiGenerali = costiGenerali.reduce((acc, c) => acc + c.importo, 0);
+    const totaleCostiGeneraliPagati = costiGenerali.filter(c => c.pagato).reduce((acc, c) => acc + c.importo, 0);
+    const totaleCostiGeneraliDaPagare = totaleCostiGenerali - totaleCostiGeneraliPagati;
+
+    // Totali
+    const totaleUscite = totaleFattureIngresso + totaleFattureConsulenti + totaleCostiVivi + totaleCostiGenerali;
+    const totaleUscitePagate = totaleFattureIngressoPagate + totaleFattureConsulentiPagate + totaleCostiVivi + totaleCostiGeneraliPagati;
+    const totaleUsciteDaPagare = totaleFattureIngressoDaPagare + totaleFattureConsulentiDaPagare + totaleCostiGeneraliDaPagare;
+
+    res.json({
+      entrate: {
+        totaleEmesso,
+        totaleIncassato,
+        totaleDaIncassare,
+        fatture: fattureEmesse.length
+      },
+      uscite: {
+        totale: totaleUscite,
+        pagate: totaleUscitePagate,
+        daPagare: totaleUsciteDaPagare,
+        dettaglio: {
+          fattureIngresso: { totale: totaleFattureIngresso, pagate: totaleFattureIngressoPagate, daPagare: totaleFattureIngressoDaPagare },
+          fattureConsulenti: { totale: totaleFattureConsulenti, pagate: totaleFattureConsulentiPagate, daPagare: totaleFattureConsulentiDaPagare },
+          costiVivi: { totale: totaleCostiVivi },
+          costiGenerali: { totale: totaleCostiGenerali, pagati: totaleCostiGeneraliPagati, daPagare: totaleCostiGeneraliDaPagare }
+        }
+      },
+      saldo: totaleIncassato - totaleUscitePagate,
+      saldoPrevisionale: totaleEmesso - totaleUscite
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to calculate cash flow' });
+  }
+});
+
+// ============================================================================
+// Project Summary Route (contatore fatture e costi per commessa)
+// ============================================================================
+router.get('/api/projects/:id/summary', async (req, res) => {
+  try {
+    const projectId = req.params.id;
+
+    // Fatture emesse
+    const fattureEmesse = await fattureEmesseStorage.findByField('projectId', projectId);
+    const totaleEmesso = fattureEmesse.reduce((acc, f) => acc + f.importoTotale, 0);
+    const totaleIncassato = fattureEmesse.filter(f => f.incassata).reduce((acc, f) => acc + f.importoTotale, 0);
+
+    // Fatture ingresso
+    const fattureIngresso = await fattureIngressoStorage.findByField('projectId', projectId);
+    const totaleFattureIngresso = fattureIngresso.reduce((acc, f) => acc + f.importo, 0);
+
+    // Fatture consulenti
+    const fattureConsulenti = await fattureConsulentiStorage.findByField('projectId', projectId);
+    const totaleFattureConsulenti = fattureConsulenti.reduce((acc, f) => acc + f.importo, 0);
+
+    // Costi vivi
+    const costiVivi = await costiViviStorage.findByField('projectId', projectId);
+    const totaleCostiVivi = costiVivi.reduce((acc, c) => acc + c.importo, 0);
+
+    // Prestazioni
+    const prestazioni = await prestazioniStorage.findByField('projectId', projectId);
+    const totalePrestazioni = prestazioni.reduce((acc, p) => acc + (p.oreLavoro * p.costoOrario), 0);
+
+    const totaleCosti = totaleFattureIngresso + totaleFattureConsulenti + totaleCostiVivi + totalePrestazioni;
+    const margine = totaleEmesso - totaleCosti;
+    const marginePercentuale = totaleEmesso > 0 ? (margine / totaleEmesso) * 100 : 0;
+
+    res.json({
+      fattureEmesse: {
+        count: fattureEmesse.length,
+        totale: totaleEmesso,
+        incassato: totaleIncassato
+      },
+      costi: {
+        fattureIngresso: { count: fattureIngresso.length, totale: totaleFattureIngresso },
+        fattureConsulenti: { count: fattureConsulenti.length, totale: totaleFattureConsulenti },
+        costiVivi: { count: costiVivi.length, totale: totaleCostiVivi },
+        prestazioni: { count: prestazioni.length, totale: totalePrestazioni },
+        totale: totaleCosti
+      },
+      margine,
+      marginePercentuale
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch project summary' });
   }
 });

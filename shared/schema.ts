@@ -92,12 +92,14 @@ export const insertFatturaIngressoSchema = z.object({
   numeroFattura: z.string().min(1, "Il numero fattura è obbligatorio"),
   fornitore: z.string().min(1, "Il fornitore è obbligatorio"),
   dataEmissione: z.string().min(1, "La data emissione è obbligatoria"),
+  dataCaricamento: z.string().optional(), // Data di caricamento nel sistema
   dataScadenzaPagamento: z.string().min(1, "La data scadenza è obbligatoria"),
-  importo: z.number().int().positive("L'importo deve essere positivo"),
+  importo: z.number().positive("L'importo deve essere positivo"),
   categoria: z.enum(["materiali", "collaborazione_esterna", "costo_vivo", "altro"]),
   descrizione: z.string().min(1, "La descrizione è obbligatoria"),
   pagata: z.boolean().default(false),
   dataPagamento: z.string().optional(),
+  allegato: z.string().optional(), // Path o URL del PDF
   note: z.string().optional(),
 });
 
@@ -112,13 +114,16 @@ export interface FatturaIngresso extends InsertFatturaIngresso {
 // ============================================================================
 export const insertCostoVivoSchema = z.object({
   projectId: z.string().min(1, "La commessa è obbligatoria"),
-  tipologia: z.enum(["viaggio", "parcheggio", "carburante", "alloggio", "vitto", "altro"]),
+  userId: z.string().optional(), // Chi ha inserito il costo
+  userName: z.string().optional(), // Nome di chi ha inserito
+  tipologia: z.enum(["viaggio", "parcheggio", "carburante", "alloggio", "vitto", "autostrada", "altro"]),
   data: z.string().min(1, "La data è obbligatoria"),
-  importo: z.number().int().positive("L'importo deve essere positivo"),
+  importo: z.number().positive("L'importo deve essere positivo"),
   descrizione: z.string().min(1, "La descrizione è obbligatoria"),
   luogo: z.string().optional(),
-  km: z.number().int().optional(),
+  km: z.number().optional(),
   destinazione: z.string().optional(),
+  allegato: z.string().optional(), // Path o URL del PDF/ricevuta
   note: z.string().optional(),
 });
 
@@ -157,7 +162,8 @@ export const insertUserSchema = z.object({
   password: z.string().min(6, "La password deve avere almeno 6 caratteri"),
   nome: z.string().min(1, "Il nome è obbligatorio"),
   email: z.string().email("Email non valida"),
-  role: z.enum(["amministratore", "collaboratore"]).default("collaboratore"),
+  role: z.enum(["admin", "operativo"]).default("operativo"),
+  profiloCostoId: z.string().optional(), // Riferimento al profilo costo orario
   active: z.boolean().default(true),
   createdAt: z.string().optional(),
 });
@@ -172,6 +178,125 @@ export interface User extends Omit<InsertUser, 'password'> {
 export interface UserWithPassword extends InsertUser {
   id: string;
   createdAt: string;
+}
+
+// ============================================================================
+// Activity Log Schema (Log personale utente)
+// ============================================================================
+export const insertActivityLogSchema = z.object({
+  userId: z.string().min(1, "L'utente è obbligatorio"),
+  userName: z.string().min(1, "Il nome utente è obbligatorio"),
+  action: z.string().min(1, "L'azione è obbligatoria"),
+  entityType: z.string().min(1, "Il tipo entità è obbligatorio"), // project, fattura, costo, etc.
+  entityId: z.string().optional(),
+  details: z.string().optional(),
+  timestamp: z.string().min(1, "Il timestamp è obbligatorio"),
+  ipAddress: z.string().optional(),
+});
+
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+
+export interface ActivityLog extends InsertActivityLog {
+  id: string;
+}
+
+// ============================================================================
+// Profili Costo Orario Schema
+// ============================================================================
+export const insertProfiloCostoSchema = z.object({
+  nome: z.string().min(1, "Il nome è obbligatorio"), // ingegnere, tecnico, operaio, amministrativo, distacco
+  descrizione: z.string().optional(),
+  costoOrario: z.number().positive("Il costo orario deve essere positivo"),
+  active: z.boolean().default(true),
+});
+
+export type InsertProfiloCosto = z.infer<typeof insertProfiloCostoSchema>;
+
+export interface ProfiloCosto extends InsertProfiloCosto {
+  id: string;
+}
+
+// ============================================================================
+// Fatture Emesse Schema (solo ADMIN)
+// ============================================================================
+export const insertFatturaEmessaSchema = z.object({
+  projectId: z.string().min(1, "La commessa è obbligatoria"),
+  numeroFattura: z.string().min(1, "Il numero fattura è obbligatorio"),
+  cliente: z.string().min(1, "Il cliente è obbligatorio"),
+  dataEmissione: z.string().min(1, "La data emissione è obbligatoria"),
+  dataScadenzaPagamento: z.string().min(1, "La data scadenza è obbligatoria"),
+  importo: z.number().positive("L'importo deve essere positivo"),
+  importoIVA: z.number().min(0).optional(),
+  importoTotale: z.number().positive("L'importo totale deve essere positivo"),
+  descrizione: z.string().min(1, "La descrizione è obbligatoria"),
+  incassata: z.boolean().default(false),
+  dataIncasso: z.string().optional(),
+  allegato: z.string().optional(), // Path o URL del PDF
+  note: z.string().optional(),
+});
+
+export type InsertFatturaEmessa = z.infer<typeof insertFatturaEmessaSchema>;
+
+export interface FatturaEmessa extends InsertFatturaEmessa {
+  id: string;
+}
+
+// ============================================================================
+// Fatture Consulenti Schema (solo ADMIN visibilità e inserimento)
+// ============================================================================
+export const insertFatturaConsulenteSchema = z.object({
+  projectId: z.string().min(1, "La commessa è obbligatoria"),
+  numeroFattura: z.string().min(1, "Il numero fattura è obbligatorio"),
+  consulente: z.string().min(1, "Il consulente è obbligatorio"),
+  dataEmissione: z.string().min(1, "La data emissione è obbligatoria"),
+  dataScadenzaPagamento: z.string().min(1, "La data scadenza è obbligatoria"),
+  importo: z.number().positive("L'importo deve essere positivo"),
+  descrizione: z.string().min(1, "La descrizione è obbligatoria"),
+  pagata: z.boolean().default(false),
+  dataPagamento: z.string().optional(),
+  allegato: z.string().optional(), // Path o URL del PDF
+  note: z.string().optional(),
+});
+
+export type InsertFatturaConsulente = z.infer<typeof insertFatturaConsulenteSchema>;
+
+export interface FatturaConsulente extends InsertFatturaConsulente {
+  id: string;
+}
+
+// ============================================================================
+// Costi Generali Schema (non associati a commesse)
+// ============================================================================
+export const insertCostoGeneraleSchema = z.object({
+  categoria: z.enum([
+    "noleggio_auto",
+    "fitto_ufficio",
+    "energia",
+    "internet_dati",
+    "giardiniere",
+    "pulizie",
+    "multe",
+    "assicurazioni",
+    "commercialista",
+    "altro"
+  ]),
+  fornitore: z.string().min(1, "Il fornitore è obbligatorio"),
+  descrizione: z.string().min(1, "La descrizione è obbligatoria"),
+  data: z.string().min(1, "La data è obbligatoria"),
+  dataScadenza: z.string().optional(),
+  importo: z.number().positive("L'importo deve essere positivo"),
+  pagato: z.boolean().default(false),
+  dataPagamento: z.string().optional(),
+  ricorrente: z.boolean().default(false),
+  periodicita: z.enum(["mensile", "bimestrale", "trimestrale", "semestrale", "annuale"]).optional(),
+  allegato: z.string().optional(), // Path o URL del PDF
+  note: z.string().optional(),
+});
+
+export type InsertCostoGenerale = z.infer<typeof insertCostoGeneraleSchema>;
+
+export interface CostoGenerale extends InsertCostoGenerale {
+  id: string;
 }
 
 // ============================================================================

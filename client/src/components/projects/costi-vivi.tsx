@@ -13,31 +13,46 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Project } from "@shared/schema";
 import { format, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
-import { Trash2, Plus, Edit2, Car, CreditCard, Home, Coffee, MapPin } from "lucide-react";
+import { Trash2, Plus, Edit2, Car, CreditCard, Home, Coffee, MapPin, Route } from "lucide-react";
+import { User } from "@/hooks/useAuth";
 
 interface CostoVivo {
   id: string;
   projectId: string;
-  tipologia: 'viaggio' | 'parcheggio' | 'carburante' | 'alloggio' | 'vitto' | 'altro';
+  userId?: string;
+  userName?: string;
+  tipologia: 'viaggio' | 'parcheggio' | 'carburante' | 'alloggio' | 'vitto' | 'autostrada' | 'altro';
   data: string; // ISO date
-  importo: number; // centesimi
+  importo: number;
   descrizione: string;
   luogo?: string;
   km?: number; // per viaggi e carburante
   destinazione?: string; // per viaggi
+  allegato?: string;
   note?: string;
+}
+
+interface CostiViviProps {
+  user?: User | null;
 }
 
 const TIPOLOGIE_COSTO = [
   { value: 'viaggio', label: 'Viaggio', icon: <Car className="w-4 h-4" />, color: 'bg-blue-100 text-blue-700' },
   { value: 'parcheggio', label: 'Parcheggio', icon: <MapPin className="w-4 h-4" />, color: 'bg-purple-100 text-purple-700' },
   { value: 'carburante', label: 'Carburante', icon: <CreditCard className="w-4 h-4" />, color: 'bg-green-100 text-green-700' },
+  { value: 'autostrada', label: 'Autostrada', icon: <Route className="w-4 h-4" />, color: 'bg-indigo-100 text-indigo-700' },
   { value: 'alloggio', label: 'Alloggio', icon: <Home className="w-4 h-4" />, color: 'bg-orange-100 text-orange-700' },
   { value: 'vitto', label: 'Vitto', icon: <Coffee className="w-4 h-4" />, color: 'bg-yellow-100 text-yellow-700' },
   { value: 'altro', label: 'Altro', icon: <CreditCard className="w-4 h-4" />, color: 'bg-gray-100 text-gray-700' },
 ];
 
-export default function CostiVivi() {
+// Helper per verificare se l'utente è admin
+const isUserAdmin = (user: User | null | undefined) => {
+  return user?.role === "admin" || user?.role === "amministratore" as any;
+};
+
+export default function CostiVivi({ user }: CostiViviProps) {
+  const isAdmin = isUserAdmin(user);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCosto, setEditingCosto] = useState<CostoVivo | null>(null);
   const { toast } = useToast();
@@ -128,6 +143,8 @@ export default function CostiVivi() {
 
     const costoData: Omit<CostoVivo, 'id'> = {
       projectId: formData.projectId,
+      userId: user?.id, // Traccia chi ha inserito il costo
+      userName: user?.nome,
       tipologia: formData.tipologia,
       data: formData.data,
       importo: importoInCentesimi,
@@ -179,15 +196,20 @@ export default function CostiVivi() {
     });
   };
 
-  // Calculate statistics
-  const totaleSpese = costiVivi.reduce((sum, costo) => sum + costo.importo, 0);
+  // Filtra i costi: admin vede tutto, operativo solo i propri
+  const filteredCostiVivi = isAdmin
+    ? costiVivi
+    : costiVivi.filter(c => c.userId === user?.id);
+
+  // Calculate statistics sui costi filtrati
+  const totaleSpese = filteredCostiVivi.reduce((sum, costo) => sum + costo.importo, 0);
 
   const speseTipologia = TIPOLOGIE_COSTO.map(tipo => ({
     ...tipo,
-    totale: costiVivi
+    totale: filteredCostiVivi
       .filter(c => c.tipologia === tipo.value)
       .reduce((sum, c) => sum + c.importo, 0),
-    count: costiVivi.filter(c => c.tipologia === tipo.value).length,
+    count: filteredCostiVivi.filter(c => c.tipologia === tipo.value).length,
   }));
 
   // Get project name
@@ -201,9 +223,9 @@ export default function CostiVivi() {
     return TIPOLOGIE_COSTO.find(t => t.value === tipologia) || TIPOLOGIE_COSTO[5];
   };
 
-  // Group costs by project
+  // Group costs by project (usando i costi filtrati)
   const costiPerProgetto = projects.map(project => {
-    const costiProgetto = costiVivi.filter(c => c.projectId === project.id);
+    const costiProgetto = filteredCostiVivi.filter(c => c.projectId === project.id);
     const totale = costiProgetto.reduce((sum, c) => sum + c.importo, 0);
     return {
       project,
@@ -395,7 +417,7 @@ export default function CostiVivi() {
             <div className="text-2xl font-bold text-gray-900">
               € {(totaleSpese / 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <p className="text-xs text-gray-500 mt-1">{costiVivi.length} costi registrati</p>
+            <p className="text-xs text-gray-500 mt-1">{filteredCostiVivi.length} costi registrati</p>
           </CardContent>
         </Card>
 
@@ -427,7 +449,7 @@ export default function CostiVivi() {
 
         {/* All Costs Tab */}
         <TabsContent value="all" className="space-y-4">
-          {costiVivi.length === 0 ? (
+          {filteredCostiVivi.length === 0 ? (
             <Card>
               <CardContent className="pt-6">
                 <p className="text-center text-gray-500">Nessun costo vivo registrato</p>
@@ -435,7 +457,7 @@ export default function CostiVivi() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {costiVivi
+              {filteredCostiVivi
                 .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
                 .map((costo) => {
                   const tipologiaConfig = getTipologiaConfig(costo.tipologia);
@@ -575,7 +597,7 @@ export default function CostiVivi() {
         {/* By Type Tab */}
         <TabsContent value="by-type" className="space-y-4">
           {TIPOLOGIE_COSTO.map((tipo) => {
-            const costiTipo = costiVivi.filter(c => c.tipologia === tipo.value);
+            const costiTipo = filteredCostiVivi.filter(c => c.tipologia === tipo.value);
             const totaleTipo = costiTipo.reduce((sum, c) => sum + c.importo, 0);
 
             if (costiTipo.length === 0) return null;

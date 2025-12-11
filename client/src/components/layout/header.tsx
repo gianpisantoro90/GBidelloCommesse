@@ -1,8 +1,10 @@
 const logoUrl = "/logo_gb_1.jpg";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, User as UserIcon, Shield } from "lucide-react";
+import { LogOut, User as UserIcon, Shield, Key } from "lucide-react";
 import { User } from "@/hooks/useAuth";
+import ChangePasswordModal from "@/components/system/change-password-modal";
 
 interface HeaderProps {
   user: User | null;
@@ -10,18 +12,25 @@ interface HeaderProps {
 }
 
 export default function Header({ user, onLogout }: HeaderProps) {
+  const [showChangePassword, setShowChangePassword] = useState(false);
+
   const handleLogout = async () => {
     await onLogout();
   };
 
+  // Supporto per vecchi e nuovi ruoli
+  const isAdmin = user?.role === "admin" || user?.role === "amministratore" as any;
+
   const getRoleLabel = (role: string) => {
-    return role === "amministratore" ? "Amministratore" : "Collaboratore";
+    if (role === "admin" || role === "amministratore") return "Admin";
+    return "Operativo";
   };
 
   const getRoleBadgeColor = (role: string) => {
-    return role === "amministratore"
-      ? "bg-red-100 text-red-800 border-red-300"
-      : "bg-blue-100 text-blue-800 border-blue-300";
+    if (role === "admin" || role === "amministratore") {
+      return "bg-red-100 text-red-800 border-red-300";
+    }
+    return "bg-blue-100 text-blue-800 border-blue-300";
   };
 
   return (
@@ -50,7 +59,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
             {user && (
               <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="flex items-center gap-2">
-                  {user.role === "amministratore" ? (
+                  {isAdmin ? (
                     <Shield className="h-5 w-5 text-red-600" />
                   ) : (
                     <UserIcon className="h-5 w-5 text-blue-600" />
@@ -70,6 +79,18 @@ export default function Header({ user, onLogout }: HeaderProps) {
               </div>
             )}
 
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowChangePassword(true)}
+                className="flex items-center gap-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+              >
+                <Key className="h-4 w-4" />
+                <span className="hidden sm:inline">Cambia Password</span>
+              </Button>
+            )}
+
             <Button
               variant="outline"
               size="sm"
@@ -83,6 +104,14 @@ export default function Header({ user, onLogout }: HeaderProps) {
           </div>
         </div>
       </div>
+
+      {user && (
+        <ChangePasswordModal
+          open={showChangePassword}
+          onOpenChange={setShowChangePassword}
+          userId={user.id}
+        />
+      )}
     </header>
   );
 }
