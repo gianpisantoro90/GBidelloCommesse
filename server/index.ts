@@ -2,13 +2,13 @@ import express, { type Request, Response, NextFunction } from 'express';
 import { router } from './routes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+// In development, use port 3000 for API server; in production, use PORT env var
+const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 5000) : 3000;
 
 // Middleware
 app.use(express.json());
