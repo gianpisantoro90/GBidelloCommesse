@@ -45,7 +45,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [activeSubTab, setActiveSubTab] = useState({
     commesse: "lista",
-    fatturazione: "emesse",
+    economia: "fatture-emesse",
     costi: "costi-vivi",
     operativita: "scadenze",
     anagrafica: "clienti",
@@ -68,6 +68,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         <TabNavigation
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          isAdmin={isAdmin}
         />
 
         <main className="p-6">
@@ -108,9 +109,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                           + Nuova Commessa
                         </TabsTrigger>
                       )}
-                      <TabsTrigger value="centro-costo" className={tabTriggerClass} data-testid="tab-centro-costo">
-                        Centro Costo
-                      </TabsTrigger>
                     </TabsList>
                   </div>
 
@@ -126,82 +124,70 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                       </div>
                     </TabsContent>
                   )}
+                </Tabs>
+              </div>
+            )}
+
+            {/* ECONOMIA Panel - Solo Admin */}
+            {activeTab === "economia" && isAdmin && (
+              <div data-testid="economia-panel">
+                <Tabs value={activeSubTab.economia} onValueChange={(value) => handleSubTabChange("economia", value)}>
+                  <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
+                    <TabsList className="flex w-full bg-transparent border-0 p-0 overflow-x-auto">
+                      <TabsTrigger value="fatture-emesse" className={tabTriggerClass} data-testid="tab-fatture-emesse">
+                        Fatture Emesse
+                      </TabsTrigger>
+                      <TabsTrigger value="fatture-ingresso" className={tabTriggerClass} data-testid="tab-fatture-ingresso">
+                        Fatture Ingresso
+                      </TabsTrigger>
+                      <TabsTrigger value="fatture-consulenti" className={tabTriggerClass} data-testid="tab-fatture-consulenti">
+                        Fatture Consulenti
+                      </TabsTrigger>
+                      <TabsTrigger value="costi-generali" className={tabTriggerClass} data-testid="tab-costi-generali">
+                        Costi Generali
+                      </TabsTrigger>
+                      <TabsTrigger value="centro-costo" className={tabTriggerClass} data-testid="tab-centro-costo">
+                        Centro Costo
+                      </TabsTrigger>
+                      <TabsTrigger value="kpi" className={tabTriggerClass} data-testid="tab-kpi">
+                        KPI Dashboard
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <TabsContent value="fatture-emesse" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <FattureEmesse />
+                  </TabsContent>
+
+                  <TabsContent value="fatture-ingresso" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <FattureIngresso />
+                  </TabsContent>
+
+                  <TabsContent value="fatture-consulenti" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <FattureConsulenti />
+                  </TabsContent>
+
+                  <TabsContent value="costi-generali" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <CostiGenerali />
+                  </TabsContent>
 
                   <TabsContent value="centro-costo" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
                     <CentroCostoDashboard />
                   </TabsContent>
+
+                  <TabsContent value="kpi" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <KpiDashboard />
+                  </TabsContent>
                 </Tabs>
               </div>
             )}
 
-            {/* FATTURAZIONE Panel */}
-            {activeTab === "fatturazione" && (
-              <div data-testid="fatturazione-panel">
-                {isAdmin ? (
-                  <Tabs value={activeSubTab.fatturazione} onValueChange={(value) => handleSubTabChange("fatturazione", value)}>
-                    <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
-                      <TabsList className="flex w-full bg-transparent border-0 p-0">
-                        <TabsTrigger value="emesse" className={tabTriggerClass} data-testid="tab-fatture-emesse">
-                          Fatture Emesse
-                        </TabsTrigger>
-                        <TabsTrigger value="ingresso" className={tabTriggerClass} data-testid="tab-fatture-ingresso">
-                          Fatture Ingresso
-                        </TabsTrigger>
-                        <TabsTrigger value="consulenti" className={tabTriggerClass} data-testid="tab-fatture-consulenti">
-                          Fatture Consulenti
-                        </TabsTrigger>
-                      </TabsList>
-                    </div>
-
-                    <TabsContent value="emesse" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                      <FattureEmesse />
-                    </TabsContent>
-
-                    <TabsContent value="ingresso" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                      <FattureIngresso />
-                    </TabsContent>
-
-                    <TabsContent value="consulenti" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                      <FattureConsulenti />
-                    </TabsContent>
-                  </Tabs>
-                ) : (
-                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 text-center">
-                    <div className="text-gray-400 text-5xl mb-4">🔒</div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Accesso Riservato</h3>
-                    <p className="text-gray-500">La sezione Fatturazione è accessibile solo agli amministratori.</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* COSTI Panel */}
+            {/* COSTI Panel - Accessibile a tutti per Costi Vivi */}
             {activeTab === "costi" && (
               <div data-testid="costi-panel">
-                <Tabs value={activeSubTab.costi} onValueChange={(value) => handleSubTabChange("costi", value)}>
-                  <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
-                    <TabsList className="flex w-full bg-transparent border-0 p-0">
-                      <TabsTrigger value="costi-vivi" className={tabTriggerClass} data-testid="tab-costi-vivi">
-                        Costi Vivi
-                      </TabsTrigger>
-                      {isAdmin && (
-                        <TabsTrigger value="costi-generali" className={tabTriggerClass} data-testid="tab-costi-generali">
-                          Costi Generali
-                        </TabsTrigger>
-                      )}
-                    </TabsList>
-                  </div>
-
-                  <TabsContent value="costi-vivi" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                    <CostiVivi user={user} />
-                  </TabsContent>
-
-                  {isAdmin && (
-                    <TabsContent value="costi-generali" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                      <CostiGenerali />
-                    </TabsContent>
-                  )}
-                </Tabs>
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                  <CostiVivi user={user} />
+                </div>
               </div>
             )}
 
@@ -238,44 +224,29 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               </div>
             )}
 
-            {/* ANAGRAFICA Panel */}
-            {activeTab === "anagrafica" && (
+            {/* ANAGRAFICA Panel - Solo Admin */}
+            {activeTab === "anagrafica" && isAdmin && (
               <div data-testid="anagrafica-panel">
-                {isAdmin ? (
-                  <Tabs value={activeSubTab.anagrafica} onValueChange={(value) => handleSubTabChange("anagrafica", value)}>
-                    <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
-                      <TabsList className="flex w-full bg-transparent border-0 p-0">
-                        <TabsTrigger value="clienti" className={tabTriggerClass} data-testid="tab-clienti">
-                          Anagrafica Clienti
-                        </TabsTrigger>
-                        <TabsTrigger value="kpi" className={tabTriggerClass} data-testid="tab-kpi">
-                          KPI Dashboard
-                        </TabsTrigger>
-                        <TabsTrigger value="parcella" className={tabTriggerClass} data-testid="tab-parcella">
-                          Calcolo Parcella
-                        </TabsTrigger>
-                      </TabsList>
-                    </div>
-
-                    <TabsContent value="clienti" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                      <ClientsTable />
-                    </TabsContent>
-
-                    <TabsContent value="kpi" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                      <KpiDashboard />
-                    </TabsContent>
-
-                    <TabsContent value="parcella" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                      <ParcellaCalculator />
-                    </TabsContent>
-                  </Tabs>
-                ) : (
-                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 text-center">
-                    <div className="text-gray-400 text-5xl mb-4">🔒</div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Accesso Riservato</h3>
-                    <p className="text-gray-500">La sezione Anagrafica è accessibile solo agli amministratori.</p>
+                <Tabs value={activeSubTab.anagrafica} onValueChange={(value) => handleSubTabChange("anagrafica", value)}>
+                  <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
+                    <TabsList className="flex w-full bg-transparent border-0 p-0">
+                      <TabsTrigger value="clienti" className={tabTriggerClass} data-testid="tab-clienti">
+                        Anagrafica Clienti
+                      </TabsTrigger>
+                      <TabsTrigger value="parcella" className={tabTriggerClass} data-testid="tab-parcella">
+                        Calcolo Parcella
+                      </TabsTrigger>
+                    </TabsList>
                   </div>
-                )}
+
+                  <TabsContent value="clienti" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <ClientsTable />
+                  </TabsContent>
+
+                  <TabsContent value="parcella" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <ParcellaCalculator />
+                  </TabsContent>
+                </Tabs>
               </div>
             )}
 
