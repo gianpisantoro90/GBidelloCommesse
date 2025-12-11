@@ -1,20 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { insertProjectSchema, type InsertProject } from "@shared/schema";
+import { insertProjectSchema, type InsertProject, type Client } from "@shared/schema";
 import { TIPO_RAPPORTO_CONFIG, type TipoRapportoType } from "@/lib/prestazioni-utils";
-import { CheckCircle, Loader2, Save } from "lucide-react";
+import { CheckCircle, Loader2, Save, Building2, MapPin, FileText, Mail, Phone } from "lucide-react";
 import { z } from "zod";
 
 const formSchema = insertProjectSchema.extend({
   year: z.number().min(0).max(99),
+  clientId: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -25,8 +27,14 @@ interface NewProjectFormProps {
 
 export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) {
   const [generatedCode, setGeneratedCode] = useState("");
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch clients
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"]
+  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -44,8 +52,31 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
       code: "",
       fsRoot: undefined,
       metadata: undefined,
+      clientId: undefined,
     },
   });
+
+  // Auto-fill city when client is selected
+  useEffect(() => {
+    if (selectedClient) {
+      form.setValue("client", selectedClient.name);
+      if (selectedClient.city) {
+        form.setValue("city", selectedClient.city);
+      }
+    }
+  }, [selectedClient, form]);
+
+  const handleClientSelect = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId);
+    if (client) {
+      setSelectedClient(client);
+      form.setValue("clientId", clientId);
+      form.setValue("client", client.name);
+      if (client.city) {
+        form.setValue("city", client.city);
+      }
+    }
+  };
 
   const generateCodeMutation = useMutation({
     mutationFn: async (data: { client: string; city: string; year: number }) => {
@@ -82,6 +113,7 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
       onProjectSaved(project);
       form.reset();
       setGeneratedCode("");
+      setSelectedClient(null);
     },
     onError: (error: any) => {
       console.error('Project creation error:', error);
@@ -137,20 +169,35 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
   return (
     <div className="card-g2" data-testid="new-project-form">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Crea Nuova Commessa</h2>
-      
+
       <form className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <Label htmlFor="client" className="block text-sm font-semibold text-gray-700 mb-2">
+            <Label className="block text-sm font-semibold text-gray-700 mb-2">
               Cliente *
             </Label>
-            <Input
-              id="client"
-              placeholder="Es. Comune di Milano"
-              className="input-g2"
-              data-testid="input-client"
-              {...form.register("client")}
-            />
+            {clients.length > 0 ? (
+              <Select
+                onValueChange={handleClientSelect}
+                value={selectedClient?.id || ""}
+                data-testid="select-client"
+              >
+                <SelectTrigger className="input-g2">
+                  <SelectValue placeholder="Seleziona un cliente..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      <span className="font-medium">{client.sigla}</span> - {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                Nessun cliente presente. Vai in Anagrafica → Clienti per aggiungerne uno.
+              </div>
+            )}
             {form.formState.errors.client && (
               <p className="text-sm text-red-600 mt-1">{form.formState.errors.client.message}</p>
             )}
@@ -171,7 +218,72 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
             )}
           </div>
         </div>
-        
+
+        {/* Card informazioni cliente selezionato */}
+        {selectedClient && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                <h4 className="font-semibold text-blue-900">Informazioni Cliente</h4>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600">Ragione Sociale:</span>
+                  <span className="font-medium">{selectedClient.name}</span>
+                </div>
+                {selectedClient.piva && (
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-600">P. IVA:</span>
+                    <span className="font-medium">{selectedClient.piva}</span>
+                  </div>
+                )}
+                {selectedClient.cf && (
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-600">C.F.:</span>
+                    <span className="font-medium">{selectedClient.cf}</span>
+                  </div>
+                )}
+                {selectedClient.address && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-600">Indirizzo:</span>
+                    <span className="font-medium">
+                      {selectedClient.address}
+                      {selectedClient.cap && `, ${selectedClient.cap}`}
+                      {selectedClient.city && ` ${selectedClient.city}`}
+                      {selectedClient.province && ` (${selectedClient.province})`}
+                    </span>
+                  </div>
+                )}
+                {selectedClient.email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-600">Email:</span>
+                    <span className="font-medium">{selectedClient.email}</span>
+                  </div>
+                )}
+                {selectedClient.pec && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-600">PEC:</span>
+                    <span className="font-medium">{selectedClient.pec}</span>
+                  </div>
+                )}
+                {selectedClient.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-600">Tel:</span>
+                    <span className="font-medium">{selectedClient.phone}</span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Nuova sezione: Tipo Rapporto Committenza */}
         <div className="grid gap-6 md:grid-cols-2">
           <div>
@@ -200,7 +312,7 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
             )}
           </div>
         </div>
-        
+
         {/* Campo Committente Finale - visibile solo se tipo != diretto */}
         {form.watch("tipoRapporto") && form.watch("tipoRapporto") !== "diretto" && (
           <div>
@@ -220,7 +332,7 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
             )}
           </div>
         )}
-        
+
         <div>
           <Label htmlFor="object" className="block text-sm font-semibold text-gray-700 mb-2">
             Oggetto Commessa *
@@ -236,7 +348,7 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
             <p className="text-sm text-red-600 mt-1">{form.formState.errors.object.message}</p>
           )}
         </div>
-        
+
         <div className="grid gap-6 md:grid-cols-2">
           <div>
             <Label htmlFor="year" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -357,13 +469,16 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
             <Button
               type="button"
               onClick={handleGenerateCode}
-              disabled={generateCodeMutation.isPending}
+              disabled={generateCodeMutation.isPending || !selectedClient}
               className="button-g2-primary"
               data-testid="button-generate-code"
             >
               {generateCodeMutation.isPending ? "Generando..." : "Genera"}
             </Button>
           </div>
+          {!selectedClient && (
+            <p className="text-xs text-amber-600 mt-1">Seleziona prima un cliente per generare il codice</p>
+          )}
         </div>
 
         <div className="border-t pt-6">
@@ -372,7 +487,7 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
             <Button
               type="button"
               onClick={form.handleSubmit(onSubmit, onError)}
-              disabled={createProjectMutation.isPending || !form.watch("code")}
+              disabled={createProjectMutation.isPending || !form.watch("code") || !selectedClient}
               className="px-8 py-3 bg-g2-success text-white rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
               data-testid="button-save-project"
             >
@@ -397,6 +512,7 @@ export default function NewProjectForm({ onProjectSaved }: NewProjectFormProps) 
               onClick={() => {
                 form.reset();
                 setGeneratedCode("");
+                setSelectedClient(null);
               }}
               className="px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
               data-testid="button-reset-form"
