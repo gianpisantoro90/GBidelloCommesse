@@ -44,15 +44,21 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   const [activeTab, setActiveTab] = useState("dashboard");
   const [activeSubTab, setActiveSubTab] = useState({
-    gestione: "progetti",
+    commesse: "lista",
+    fatturazione: "emesse",
+    costi: "costi-vivi",
+    operativita: "scadenze",
+    anagrafica: "clienti",
     sistema: "storage",
-    vista: "tabella"
   });
   const [pendingProject, setPendingProject] = useState(null);
 
   const handleSubTabChange = (mainTab: string, subTab: string) => {
     setActiveSubTab(prev => ({ ...prev, [mainTab]: subTab }));
   };
+
+  // Stile comune per i tab trigger
+  const tabTriggerClass = "px-4 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary data-[state=active]:bg-secondary/5 hover:bg-gray-50 transition-all rounded-none whitespace-nowrap";
 
   return (
     <div className="min-h-screen bg-g2-accent">
@@ -88,270 +94,233 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               </div>
             )}
 
-            {/* Management Panel */}
-            {activeTab === "gestione" && (
-              <div data-testid="management-panel">
-                <Tabs value={activeSubTab.gestione} onValueChange={(value) => handleSubTabChange("gestione", value)}>
-                  <div className="bg-white rounded-t-2xl border-b border-gray-200 overflow-x-auto">
-                    <TabsList className="inline-flex w-auto min-w-full bg-transparent border-0 p-0">
-                      <TabsTrigger
-                        value="progetti"
-                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-progetti"
-                      >
-                        Commesse
+            {/* COMMESSE Panel */}
+            {activeTab === "commesse" && (
+              <div data-testid="commesse-panel">
+                <Tabs value={activeSubTab.commesse} onValueChange={(value) => handleSubTabChange("commesse", value)}>
+                  <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
+                    <TabsList className="flex w-full bg-transparent border-0 p-0">
+                      <TabsTrigger value="lista" className={tabTriggerClass} data-testid="tab-lista">
+                        Lista Commesse
                       </TabsTrigger>
                       {isAdmin && (
-                        <TabsTrigger
-                          value="nuova"
-                          className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                          data-testid="tab-nuova"
-                        >
-                          + Nuova
+                        <TabsTrigger value="nuova" className={tabTriggerClass} data-testid="tab-nuova">
+                          + Nuova Commessa
                         </TabsTrigger>
                       )}
-                      <TabsTrigger
-                        value="centro-costo"
-                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-centro-costo"
-                      >
+                      <TabsTrigger value="centro-costo" className={tabTriggerClass} data-testid="tab-centro-costo">
                         Centro Costo
                       </TabsTrigger>
-                      {isAdmin && (
-                        <TabsTrigger
-                          value="fatture-emesse"
-                          className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                          data-testid="tab-fatture-emesse"
-                        >
-                          Fatt. Emesse
+                    </TabsList>
+                  </div>
+
+                  <TabsContent value="lista" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <ProjectsTable />
+                  </TabsContent>
+
+                  {isAdmin && (
+                    <TabsContent value="nuova" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                      <div className="max-w-2xl mx-auto space-y-6">
+                        <NewProjectForm onProjectSaved={setPendingProject} />
+                        <FolderStructureCard pendingProject={pendingProject} />
+                      </div>
+                    </TabsContent>
+                  )}
+
+                  <TabsContent value="centro-costo" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <CentroCostoDashboard />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+
+            {/* FATTURAZIONE Panel */}
+            {activeTab === "fatturazione" && (
+              <div data-testid="fatturazione-panel">
+                {isAdmin ? (
+                  <Tabs value={activeSubTab.fatturazione} onValueChange={(value) => handleSubTabChange("fatturazione", value)}>
+                    <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
+                      <TabsList className="flex w-full bg-transparent border-0 p-0">
+                        <TabsTrigger value="emesse" className={tabTriggerClass} data-testid="tab-fatture-emesse">
+                          Fatture Emesse
                         </TabsTrigger>
-                      )}
-                      {isAdmin && (
-                        <TabsTrigger
-                          value="fatture-ingresso"
-                          className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                          data-testid="tab-fatture-ingresso"
-                        >
-                          Fatt. Ingresso
+                        <TabsTrigger value="ingresso" className={tabTriggerClass} data-testid="tab-fatture-ingresso">
+                          Fatture Ingresso
                         </TabsTrigger>
-                      )}
-                      {isAdmin && (
-                        <TabsTrigger
-                          value="fatture-consulenti"
-                          className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                          data-testid="tab-fatture-consulenti"
-                        >
-                          Fatt. Consulenti
+                        <TabsTrigger value="consulenti" className={tabTriggerClass} data-testid="tab-fatture-consulenti">
+                          Fatture Consulenti
                         </TabsTrigger>
-                      )}
-                      <TabsTrigger
-                        value="costi-vivi"
-                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-costi-vivi"
-                      >
+                      </TabsList>
+                    </div>
+
+                    <TabsContent value="emesse" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                      <FattureEmesse />
+                    </TabsContent>
+
+                    <TabsContent value="ingresso" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                      <FattureIngresso />
+                    </TabsContent>
+
+                    <TabsContent value="consulenti" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                      <FattureConsulenti />
+                    </TabsContent>
+                  </Tabs>
+                ) : (
+                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 text-center">
+                    <div className="text-gray-400 text-5xl mb-4">🔒</div>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Accesso Riservato</h3>
+                    <p className="text-gray-500">La sezione Fatturazione è accessibile solo agli amministratori.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* COSTI Panel */}
+            {activeTab === "costi" && (
+              <div data-testid="costi-panel">
+                <Tabs value={activeSubTab.costi} onValueChange={(value) => handleSubTabChange("costi", value)}>
+                  <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
+                    <TabsList className="flex w-full bg-transparent border-0 p-0">
+                      <TabsTrigger value="costi-vivi" className={tabTriggerClass} data-testid="tab-costi-vivi">
                         Costi Vivi
                       </TabsTrigger>
                       {isAdmin && (
-                        <TabsTrigger
-                          value="costi-generali"
-                          className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                          data-testid="tab-costi-generali"
-                        >
+                        <TabsTrigger value="costi-generali" className={tabTriggerClass} data-testid="tab-costi-generali">
                           Costi Generali
-                        </TabsTrigger>
-                      )}
-                      <TabsTrigger
-                        value="scadenzario"
-                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-scadenzario"
-                      >
-                        Scadenze
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="comunicazioni"
-                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-comunicazioni"
-                      >
-                        Comunicazioni
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="risorse"
-                        className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-risorse"
-                      >
-                        Risorse
-                      </TabsTrigger>
-                      {isAdmin && (
-                        <TabsTrigger
-                          value="clienti"
-                          className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                          data-testid="tab-clienti"
-                        >
-                          Clienti
-                        </TabsTrigger>
-                      )}
-                      {isAdmin && (
-                        <TabsTrigger
-                          value="kpi"
-                          className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                          data-testid="tab-kpi"
-                        >
-                          KPI
-                        </TabsTrigger>
-                      )}
-                      {isAdmin && (
-                        <TabsTrigger
-                          value="parcella"
-                          className="px-4 py-3 text-xs font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                          data-testid="tab-parcella"
-                        >
-                          Calc. Parcella
                         </TabsTrigger>
                       )}
                     </TabsList>
                   </div>
 
-                  <TabsContent value="progetti" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                    <ProjectsTable />
-                  </TabsContent>
-
-                  <TabsContent value="risorse" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                    <GestioneRisorse />
-                  </TabsContent>
-
-                  {isAdmin && (
-                    <TabsContent value="kpi" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                      <KpiDashboard />
-                    </TabsContent>
-                  )}
-
-                  {isAdmin && (
-                    <TabsContent value="parcella" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                      <ParcellaCalculator />
-                    </TabsContent>
-                  )}
-
-                  <TabsContent value="scadenzario" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                    <Scadenzario />
-                  </TabsContent>
-
-                  <TabsContent value="comunicazioni" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                    <RegistroComunicazioni />
-                  </TabsContent>
-
-                  {isAdmin && (
-                    <TabsContent value="fatture-emesse" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                      <FattureEmesse />
-                    </TabsContent>
-                  )}
-
-                  {isAdmin && (
-                    <TabsContent value="fatture-ingresso" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                      <FattureIngresso />
-                    </TabsContent>
-                  )}
-
-                  {isAdmin && (
-                    <TabsContent value="fatture-consulenti" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                      <FattureConsulenti />
-                    </TabsContent>
-                  )}
-
-                  <TabsContent value="costi-vivi" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
+                  <TabsContent value="costi-vivi" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
                     <CostiVivi user={user} />
                   </TabsContent>
 
                   {isAdmin && (
-                    <TabsContent value="costi-generali" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
+                    <TabsContent value="costi-generali" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
                       <CostiGenerali />
-                    </TabsContent>
-                  )}
-
-                  <TabsContent value="centro-costo" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                    <CentroCostoDashboard />
-                  </TabsContent>
-
-                  {isAdmin && (
-                    <TabsContent value="nuova" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                      <div className="max-w-2xl mx-auto space-y-6">
-                        <NewProjectForm
-                          onProjectSaved={setPendingProject}
-                        />
-                        <FolderStructureCard
-                          pendingProject={pendingProject}
-                        />
-                      </div>
-                    </TabsContent>
-                  )}
-
-                  {isAdmin && (
-                    <TabsContent value="clienti" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
-                      <ClientsTable />
                     </TabsContent>
                   )}
                 </Tabs>
               </div>
             )}
 
+            {/* OPERATIVITA Panel */}
+            {activeTab === "operativita" && (
+              <div data-testid="operativita-panel">
+                <Tabs value={activeSubTab.operativita} onValueChange={(value) => handleSubTabChange("operativita", value)}>
+                  <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
+                    <TabsList className="flex w-full bg-transparent border-0 p-0">
+                      <TabsTrigger value="scadenze" className={tabTriggerClass} data-testid="tab-scadenze">
+                        Scadenzario
+                      </TabsTrigger>
+                      <TabsTrigger value="comunicazioni" className={tabTriggerClass} data-testid="tab-comunicazioni">
+                        Comunicazioni
+                      </TabsTrigger>
+                      <TabsTrigger value="risorse" className={tabTriggerClass} data-testid="tab-risorse">
+                        Gestione Risorse
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
 
-            {/* System Panel */}
+                  <TabsContent value="scadenze" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <Scadenzario />
+                  </TabsContent>
+
+                  <TabsContent value="comunicazioni" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <RegistroComunicazioni />
+                  </TabsContent>
+
+                  <TabsContent value="risorse" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                    <GestioneRisorse />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+
+            {/* ANAGRAFICA Panel */}
+            {activeTab === "anagrafica" && (
+              <div data-testid="anagrafica-panel">
+                {isAdmin ? (
+                  <Tabs value={activeSubTab.anagrafica} onValueChange={(value) => handleSubTabChange("anagrafica", value)}>
+                    <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
+                      <TabsList className="flex w-full bg-transparent border-0 p-0">
+                        <TabsTrigger value="clienti" className={tabTriggerClass} data-testid="tab-clienti">
+                          Anagrafica Clienti
+                        </TabsTrigger>
+                        <TabsTrigger value="kpi" className={tabTriggerClass} data-testid="tab-kpi">
+                          KPI Dashboard
+                        </TabsTrigger>
+                        <TabsTrigger value="parcella" className={tabTriggerClass} data-testid="tab-parcella">
+                          Calcolo Parcella
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
+
+                    <TabsContent value="clienti" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                      <ClientsTable />
+                    </TabsContent>
+
+                    <TabsContent value="kpi" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                      <KpiDashboard />
+                    </TabsContent>
+
+                    <TabsContent value="parcella" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
+                      <ParcellaCalculator />
+                    </TabsContent>
+                  </Tabs>
+                ) : (
+                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 text-center">
+                    <div className="text-gray-400 text-5xl mb-4">🔒</div>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Accesso Riservato</h3>
+                    <p className="text-gray-500">La sezione Anagrafica è accessibile solo agli amministratori.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SISTEMA Panel */}
             {activeTab === "sistema" && (
-              <div data-testid="system-panel">
+              <div data-testid="sistema-panel">
                 <Tabs value={activeSubTab.sistema} onValueChange={(value) => handleSubTabChange("sistema", value)}>
-                  <div className="bg-white rounded-t-2xl border-b border-gray-200 overflow-x-auto">
-                    <TabsList className="inline-flex w-auto min-w-full bg-transparent border-0 p-0">
-                      <TabsTrigger
-                        value="storage"
-                        className="px-6 py-4 text-sm font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-storage"
-                      >
+                  <div className="bg-white rounded-t-2xl border-b border-gray-200 shadow-sm">
+                    <TabsList className="flex w-full bg-transparent border-0 p-0">
+                      <TabsTrigger value="storage" className={tabTriggerClass} data-testid="tab-storage">
                         Storage
                       </TabsTrigger>
                       {isAdmin && (
-                        <TabsTrigger
-                          value="users"
-                          className="px-6 py-4 text-sm font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                          data-testid="tab-users"
-                        >
+                        <TabsTrigger value="users" className={tabTriggerClass} data-testid="tab-users">
                           Gestione Utenti
                         </TabsTrigger>
                       )}
                       {isAdmin && (
-                        <TabsTrigger
-                          value="profili-costo"
-                          className="px-6 py-4 text-sm font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                          data-testid="tab-profili-costo"
-                        >
+                        <TabsTrigger value="profili-costo" className={tabTriggerClass} data-testid="tab-profili-costo">
                           Profili Costo
                         </TabsTrigger>
                       )}
-                      <TabsTrigger
-                        value="activity-log"
-                        className="px-6 py-4 text-sm font-semibold border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:text-secondary hover:bg-gray-50 transition-colors rounded-none whitespace-nowrap"
-                        data-testid="tab-activity-log"
-                      >
+                      <TabsTrigger value="activity-log" className={tabTriggerClass} data-testid="tab-activity-log">
                         Log Attività
                       </TabsTrigger>
                     </TabsList>
                   </div>
 
-                  <TabsContent value="storage" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
+                  <TabsContent value="storage" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
                     <StoragePanel />
                   </TabsContent>
 
                   {isAdmin && (
-                    <TabsContent value="users" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
+                    <TabsContent value="users" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
                       <UsersManagement />
                     </TabsContent>
                   )}
 
                   {isAdmin && (
-                    <TabsContent value="profili-costo" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
+                    <TabsContent value="profili-costo" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
                       <ProfiliCostoManagement />
                     </TabsContent>
                   )}
 
-                  <TabsContent value="activity-log" className="bg-white rounded-b-2xl shadow-lg border border-gray-100 p-6 mt-0">
+                  <TabsContent value="activity-log" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
                     <ActivityLogViewer userId={isAdmin ? undefined : user?.id} showAll={isAdmin} />
                   </TabsContent>
                 </Tabs>

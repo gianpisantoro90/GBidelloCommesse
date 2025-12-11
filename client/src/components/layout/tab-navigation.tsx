@@ -6,7 +6,11 @@ interface TabNavigationProps {
 export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
   const tabs = [
     { id: "dashboard", label: "Dashboard", emoji: "🏠" },
-    { id: "gestione", label: "Gestione", emoji: "📁" },
+    { id: "commesse", label: "Commesse", emoji: "📁" },
+    { id: "fatturazione", label: "Fatturazione", emoji: "💰" },
+    { id: "costi", label: "Costi", emoji: "📊" },
+    { id: "operativita", label: "Operatività", emoji: "📋" },
+    { id: "anagrafica", label: "Anagrafica", emoji: "👥" },
     { id: "sistema", label: "Sistema", emoji: "⚙️" },
   ];
 
