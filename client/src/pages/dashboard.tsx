@@ -15,9 +15,11 @@ import Scadenzario from "@/components/projects/scadenzario";
 import RegistroComunicazioni from "@/components/projects/registro-comunicazioni";
 import GestioneRisorse from "@/components/projects/gestione-risorse";
 import KpiDashboard from "@/components/projects/kpi-dashboard";
-import FattureIngresso from "@/components/projects/fatture-ingresso";
-import FattureEmesse from "@/components/projects/fatture-emesse";
-import FattureConsulenti from "@/components/projects/fatture-consulenti";
+import {
+  FattureEmesseManager,
+  FattureIngressoManager,
+  FattureConsulentiManager
+} from "@/components/projects/generic-invoice-manager";
 import CostiVivi from "@/components/projects/costi-vivi";
 import CostiGenerali from "@/components/projects/costi-generali";
 import CentroCostoDashboard from "@/components/projects/centro-costo-dashboard";
@@ -156,15 +158,15 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                   </div>
 
                   <TabsContent value="fatture-emesse" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                    <FattureEmesse />
+                    <FattureEmesseManager />
                   </TabsContent>
 
                   <TabsContent value="fatture-ingresso" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                    <FattureIngresso />
+                    <FattureIngressoManager />
                   </TabsContent>
 
                   <TabsContent value="fatture-consulenti" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
-                    <FattureConsulenti />
+                    <FattureConsulentiManager />
                   </TabsContent>
 
                   <TabsContent value="costi-generali" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
