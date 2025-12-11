@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Pencil, Trash2, FileText, Check, Clock, Euro, Download } from "lucide-react";
+import { PdfUpload } from "@/components/ui/pdf-upload";
 import type { FatturaEmessa, Project } from "@shared/schema";
 
 export default function FattureEmesse() {
@@ -498,13 +499,10 @@ export default function FattureEmesse() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="allegato">URL Allegato PDF</Label>
-              <Input
-                id="allegato"
-                type="url"
+              <Label>Allegato PDF</Label>
+              <PdfUpload
                 value={formData.allegato}
-                onChange={(e) => setFormData(prev => ({ ...prev, allegato: e.target.value }))}
-                placeholder="https://..."
+                onChange={(url) => setFormData(prev => ({ ...prev, allegato: url }))}
               />
             </div>
 
