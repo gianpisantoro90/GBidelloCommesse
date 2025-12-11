@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Pencil, Trash2, Building, Check, Clock, Euro, Download, RefreshCw } from "lucide-react";
 import type { CostoGenerale } from "@shared/schema";
+import { formatCurrency, formatCurrencyFromCents, formatDate, toCents, fromCents } from "@/lib/financial-utils";
 
 const CATEGORIE = {
   noleggio_auto: "Noleggio Auto",
@@ -170,14 +171,6 @@ export default function CostiGenerali() {
         dataPagamento: newStatus ? new Date().toISOString().split('T')[0] : ""
       }
     });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('it-IT');
   };
 
   const filteredCosti = costi.filter(c => {
