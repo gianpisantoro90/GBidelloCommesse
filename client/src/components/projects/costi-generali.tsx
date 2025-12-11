@@ -1,0 +1,512 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { Plus, Pencil, Trash2, Building, Check, Clock, Euro, Download, RefreshCw } from "lucide-react";
+import type { CostoGenerale } from "@shared/schema";
+
+const CATEGORIE = {
+  noleggio_auto: "Noleggio Auto",
+  fitto_ufficio: "Fitto Ufficio",
+  energia: "Energia",
+  internet_dati: "Internet/Dati",
+  giardiniere: "Giardiniere",
+  pulizie: "Pulizie",
+  multe: "Multe",
+  assicurazioni: "Assicurazioni",
+  commercialista: "Commercialista",
+  altro: "Altro"
+};
+
+const PERIODICITA = {
+  mensile: "Mensile",
+  bimestrale: "Bimestrale",
+  trimestrale: "Trimestrale",
+  semestrale: "Semestrale",
+  annuale: "Annuale"
+};
+
+export default function CostiGenerali() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCosto, setEditingCosto] = useState<CostoGenerale | null>(null);
+  const [filterCategoria, setFilterCategoria] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  const [formData, setFormData] = useState({
+    categoria: "altro" as keyof typeof CATEGORIE,
+    fornitore: "",
+    descrizione: "",
+    data: new Date().toISOString().split('T')[0],
+    dataScadenza: "",
+    importo: 0,
+    pagato: false,
+    dataPagamento: "",
+    ricorrente: false,
+    periodicita: "" as keyof typeof PERIODICITA | "",
+    allegato: "",
+    note: ""
+  });
+
+  const { data: costi = [], isLoading } = useQuery<CostoGenerale[]>({
+    queryKey: ["costi-generali"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/costi-generali");
+      if (!response.ok) throw new Error("Failed to fetch");
+      return response.json();
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const response = await apiRequest("POST", "/api/costi-generali", data);
+      if (!response.ok) throw new Error("Failed to create");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["costi-generali"] });
+      toast({ title: "Successo", description: "Costo creato con successo" });
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: "Errore", description: "Errore durante la creazione", variant: "destructive" });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<typeof formData> }) => {
+      const response = await apiRequest("PUT", `/api/costi-generali/${id}`, data);
+      if (!response.ok) throw new Error("Failed to update");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["costi-generali"] });
+      toast({ title: "Successo", description: "Costo aggiornato con successo" });
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: "Errore", description: "Errore durante l'aggiornamento", variant: "destructive" });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/costi-generali/${id}`);
+      if (!response.ok) throw new Error("Failed to delete");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["costi-generali"] });
+      toast({ title: "Successo", description: "Costo eliminato con successo" });
+    },
+    onError: () => {
+      toast({ title: "Errore", description: "Errore durante l'eliminazione", variant: "destructive" });
+    }
+  });
+
+  const resetForm = () => {
+    setFormData({
+      categoria: "altro",
+      fornitore: "",
+      descrizione: "",
+      data: new Date().toISOString().split('T')[0],
+      dataScadenza: "",
+      importo: 0,
+      pagato: false,
+      dataPagamento: "",
+      ricorrente: false,
+      periodicita: "",
+      allegato: "",
+      note: ""
+    });
+    setEditingCosto(null);
+    setIsDialogOpen(false);
+  };
+
+  const handleEdit = (costo: CostoGenerale) => {
+    setEditingCosto(costo);
+    setFormData({
+      categoria: costo.categoria,
+      fornitore: costo.fornitore,
+      descrizione: costo.descrizione,
+      data: costo.data,
+      dataScadenza: costo.dataScadenza || "",
+      importo: costo.importo,
+      pagato: costo.pagato,
+      dataPagamento: costo.dataPagamento || "",
+      ricorrente: costo.ricorrente,
+      periodicita: costo.periodicita || "",
+      allegato: costo.allegato || "",
+      note: costo.note || ""
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingCosto) {
+      updateMutation.mutate({ id: editingCosto.id, data: formData });
+    } else {
+      createMutation.mutate(formData);
+    }
+  };
+
+  const togglePagato = async (costo: CostoGenerale) => {
+    const newStatus = !costo.pagato;
+    await updateMutation.mutateAsync({
+      id: costo.id,
+      data: {
+        pagato: newStatus,
+        dataPagamento: newStatus ? new Date().toISOString().split('T')[0] : ""
+      }
+    });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('it-IT');
+  };
+
+  const filteredCosti = costi.filter(c => {
+    if (filterCategoria !== "all" && c.categoria !== filterCategoria) return false;
+    if (filterStatus === "pagati" && !c.pagato) return false;
+    if (filterStatus === "da_pagare" && c.pagato) return false;
+    return true;
+  });
+
+  const totaleCosti = filteredCosti.reduce((acc, c) => acc + c.importo, 0);
+  const totalePagati = filteredCosti.filter(c => c.pagato).reduce((acc, c) => acc + c.importo, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
+        <div className="flex gap-2">
+          <Select value={filterCategoria} onValueChange={setFilterCategoria}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Tutte le categorie" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutte le categorie</SelectItem>
+              {Object.entries(CATEGORIE).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Tutti" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutti</SelectItem>
+              <SelectItem value="pagati">Pagati</SelectItem>
+              <SelectItem value="da_pagare">Da pagare</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button onClick={() => setIsDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Nuovo Costo Generale
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Totale Costi</span>
+              <Building className="h-4 w-4 text-blue-500" />
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(totaleCosti)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Pagati</span>
+              <Check className="h-4 w-4 text-green-500" />
+            </div>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalePagati)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Da Pagare</span>
+              <Clock className="h-4 w-4 text-red-500" />
+            </div>
+            <p className="text-2xl font-bold text-red-600">{formatCurrency(totaleCosti - totalePagati)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-4 animate-pulse space-y-2">
+              <div className="h-10 bg-gray-200 rounded"></div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+            </div>
+          ) : filteredCosti.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">Nessun costo generale registrato</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Fornitore</TableHead>
+                    <TableHead>Descrizione</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Scadenza</TableHead>
+                    <TableHead className="text-right">Importo</TableHead>
+                    <TableHead className="text-center">Stato</TableHead>
+                    <TableHead className="text-right">Azioni</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCosti.map((costo) => (
+                    <TableRow key={costo.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {CATEGORIE[costo.categoria]}
+                          {costo.ricorrente && (
+                            <RefreshCw className="h-3 w-3 text-blue-500" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{costo.fornitore}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{costo.descrizione}</TableCell>
+                      <TableCell>{formatDate(costo.data)}</TableCell>
+                      <TableCell>{costo.dataScadenza ? formatDate(costo.dataScadenza) : "-"}</TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatCurrency(costo.importo)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={costo.pagato ? "default" : "destructive"}
+                          className="cursor-pointer"
+                          onClick={() => togglePagato(costo)}
+                        >
+                          {costo.pagato ? "Pagato" : "Da pagare"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {costo.allegato && (
+                            <Button variant="ghost" size="sm" asChild>
+                              <a href={costo.allegato} target="_blank" rel="noopener noreferrer">
+                                <Download className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(costo)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm("Sei sicuro di voler eliminare questo costo?")) {
+                                deleteMutation.mutate(costo.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCosto ? "Modifica Costo" : "Nuovo Costo Generale"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="categoria">Categoria *</Label>
+                <Select
+                  value={formData.categoria}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, categoria: value as keyof typeof CATEGORIE }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(CATEGORIE).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="fornitore">Fornitore *</Label>
+                <Input
+                  id="fornitore"
+                  value={formData.fornitore}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fornitore: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="descrizione">Descrizione *</Label>
+              <Textarea
+                id="descrizione"
+                value={formData.descrizione}
+                onChange={(e) => setFormData(prev => ({ ...prev, descrizione: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="data">Data *</Label>
+                <Input
+                  id="data"
+                  type="date"
+                  value={formData.data}
+                  onChange={(e) => setFormData(prev => ({ ...prev, data: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dataScadenza">Data Scadenza</Label>
+                <Input
+                  id="dataScadenza"
+                  type="date"
+                  value={formData.dataScadenza}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dataScadenza: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="importo">Importo *</Label>
+              <div className="relative">
+                <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="importo"
+                  type="number"
+                  step="0.01"
+                  className="pl-9"
+                  value={formData.importo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, importo: parseFloat(e.target.value) || 0 }))}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="ricorrente">Costo Ricorrente</Label>
+              <Switch
+                id="ricorrente"
+                checked={formData.ricorrente}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ricorrente: checked }))}
+              />
+            </div>
+
+            {formData.ricorrente && (
+              <div className="space-y-2">
+                <Label htmlFor="periodicita">Periodicità</Label>
+                <Select
+                  value={formData.periodicita}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, periodicita: value as keyof typeof PERIODICITA }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona periodicità" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PERIODICITA).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="pagato">Pagato</Label>
+              <Switch
+                id="pagato"
+                checked={formData.pagato}
+                onCheckedChange={(checked) => setFormData(prev => ({
+                  ...prev,
+                  pagato: checked,
+                  dataPagamento: checked ? new Date().toISOString().split('T')[0] : ""
+                }))}
+              />
+            </div>
+
+            {formData.pagato && (
+              <div className="space-y-2">
+                <Label htmlFor="dataPagamento">Data Pagamento</Label>
+                <Input
+                  id="dataPagamento"
+                  type="date"
+                  value={formData.dataPagamento}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dataPagamento: e.target.value }))}
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="allegato">URL Allegato PDF</Label>
+              <Input
+                id="allegato"
+                type="url"
+                value={formData.allegato}
+                onChange={(e) => setFormData(prev => ({ ...prev, allegato: e.target.value }))}
+                placeholder="https://..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="note">Note</Label>
+              <Textarea
+                id="note"
+                value={formData.note}
+                onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={resetForm}>
+                Annulla
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                {editingCosto ? "Aggiorna" : "Crea"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

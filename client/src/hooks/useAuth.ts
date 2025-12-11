@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 
-export type UserRole = "amministratore" | "collaboratore";
+export type UserRole = "admin" | "operativo";
 
 export interface User {
   id: string;
@@ -9,6 +9,7 @@ export interface User {
   role: UserRole;
   nome: string;
   email: string;
+  profiloCostoId?: string;
 }
 
 export function useAuth() {
@@ -54,8 +55,9 @@ export function useAuth() {
     }
   };
 
-  const isAdmin = () => user?.role === "amministratore";
-  const isCollaboratore = () => user?.role === "collaboratore";
+  // Supporto per i vecchi ruoli (retrocompatibilità) e i nuovi
+  const isAdmin = () => user?.role === "admin" || user?.role === "amministratore" as any;
+  const isOperativo = () => user?.role === "operativo" || user?.role === "collaboratore" as any;
 
   useEffect(() => {
     checkAuth();
@@ -69,6 +71,6 @@ export function useAuth() {
     logout,
     checkAuth,
     isAdmin,
-    isCollaboratore
+    isOperativo
   };
 }
