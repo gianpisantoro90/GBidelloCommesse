@@ -12,20 +12,10 @@
   {
     "id": "collab-001",
     "username": "collaboratore",
-    "password": "Collab2025!",
+    "password": "Prova1",
     "role": "collaboratore",
     "nome": "Collaboratore Test",
     "email": "collaboratore@gbidello.it",
-    "createdAt": "2025-01-01T00:00:00.000Z",
-    "active": true
-  },
-  {
-    "id": "g2-001",
-    "username": "G2Ingegneria",
-    "password": "",
-    "role": "amministratore",
-    "nome": "Gianfranco Bidello",
-    "email": "info@g2ingegneria.it",
     "createdAt": "2025-01-01T00:00:00.000Z",
     "active": true
   }
