@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { PROJECT_TEMPLATES, downloadScriptFiles } from "@/lib/file-system";
-import { AlertCircle } from "lucide-react";
 
 interface FolderStructureCardProps {
   pendingProject: any;
@@ -90,17 +89,6 @@ export default function FolderStructureCard({ pendingProject }: FolderStructureC
           ) : (
             <div className="text-gray-400">Salvare prima una commessa per vedere l'anteprima</div>
           )}
-        </div>
-      </div>
-      
-      {/* Stato OneDrive */}
-      <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
-        <div className="flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-600" />
-          <div>
-            <span className="text-sm font-medium text-blue-700">Sistema OneDrive Attivo</span>
-            <div className="text-xs text-gray-600">Le cartelle vengono create direttamente in OneDrive o tramite script locali</div>
-          </div>
         </div>
       </div>
       
