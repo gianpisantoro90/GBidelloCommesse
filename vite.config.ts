@@ -29,9 +29,13 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    middlewareMode: false,
+    allowedHosts: true,
+    host: "0.0.0.0",
+    port: 5000,
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: "http://localhost:3000",
         changeOrigin: true,
       },
     },

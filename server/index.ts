@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
@@ -28,7 +28,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // API Routes
 app.use(router);
 
-// Serve static files in production or proxy to Vite in development
+// Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   const publicPath = path.join(__dirname, '..', 'dist', 'public');
   app.use(express.static(publicPath));
@@ -36,15 +36,6 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (req: Request, res: Response) => {
     res.sendFile(path.join(publicPath, 'index.html'));
   });
-} else {
-  // In development, proxy all non-API requests to Vite dev server
-  const viteProxy = createProxyMiddleware({
-    target: 'http://localhost:5173',
-    changeOrigin: true,
-    ws: true,
-  });
-  
-  app.use(viteProxy);
 }
 
 // Error handling middleware
@@ -57,7 +48,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📁 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
