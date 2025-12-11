@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Plus, Edit, Trash2, Euro, Calendar, CheckCircle, Clock, AlertCircle, Receipt } from "lucide-react";
+import { PdfUpload } from "@/components/ui/pdf-upload";
 import { type Project } from "@shared/schema";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -56,7 +57,8 @@ export default function FattureIngresso() {
     importo: 0,
     categoria: "materiali" as FatturaIngresso['categoria'],
     descrizione: "",
-    note: ""
+    note: "",
+    allegato: ""
   });
 
   // Fetch progetti
@@ -143,7 +145,8 @@ export default function FattureIngresso() {
       importo: 0,
       categoria: "materiali",
       descrizione: "",
-      note: ""
+      note: "",
+      allegato: ""
     });
     setSelectedProject("");
     setEditingInvoice(null);
@@ -181,7 +184,8 @@ export default function FattureIngresso() {
       importo: invoice.importo / 100,
       categoria: invoice.categoria,
       descrizione: invoice.descrizione,
-      note: invoice.note || ""
+      note: invoice.note || "",
+      allegato: invoice.allegato || ""
     });
     setIsDialogOpen(true);
   };
@@ -359,6 +363,14 @@ export default function FattureIngresso() {
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                   rows={2}
+                />
+              </div>
+
+              <div>
+                <Label>Allegato PDF</Label>
+                <PdfUpload
+                  value={formData.allegato}
+                  onChange={(url) => setFormData({ ...formData, allegato: url })}
                 />
               </div>
 

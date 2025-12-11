@@ -1,5 +1,9 @@
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import {
   projectsStorage,
   clientsStorage,
@@ -57,6 +61,78 @@ import {
 } from '@shared/schema';
 
 export const router = Router();
+
+// ============================================================================
+// File Upload Configuration
+// ============================================================================
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '..', 'uploads', 'pdf');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for PDF uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
+    const ext = path.extname(file.originalname);
+    cb(null, `${uniqueSuffix}${ext}`);
+  }
+});
+
+const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (file.mimetype === 'application/pdf') {
+    cb(null, true);
+  } else {
+    cb(new Error('Solo file PDF sono consentiti'));
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB max
+  }
+});
+
+// ============================================================================
+// PDF Upload Route
+// ============================================================================
+router.post('/api/upload/pdf', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nessun file caricato' });
+    }
+
+    const fileUrl = `/uploads/pdf/${req.file.filename}`;
+    res.json({
+      url: fileUrl,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      size: req.file.size
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Errore durante l\'upload del file' });
+  }
+});
+
+// Serve uploaded files
+router.use('/uploads', (req, res, next) => {
+  const filePath = path.join(__dirname, '..', 'uploads', req.path);
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).json({ error: 'File non trovato' });
+  }
+});
 
 // ============================================================================
 // Code Generation Route
