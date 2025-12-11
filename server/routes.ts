@@ -38,6 +38,24 @@ import type {
   InsertCostoGenerale
 } from '@shared/schema';
 
+import {
+  insertProjectSchema,
+  insertClientSchema,
+  insertFatturaIngressoSchema,
+  insertCostoVivoSchema,
+  insertPrestazioneSchema,
+  insertUserSchema,
+  insertScadenzaSchema,
+  insertComunicazioneSchema,
+  insertTagSchema,
+  insertProjectResourceSchema,
+  insertActivityLogSchema,
+  insertProfiloCostoSchema,
+  insertFatturaEmessaSchema,
+  insertFatturaConsulentiSchema,
+  insertCostoGeneraleSchema
+} from '@shared/schema';
+
 export const router = Router();
 
 // ============================================================================
@@ -112,7 +130,17 @@ router.get('/api/projects/:id', async (req, res) => {
 
 router.post('/api/projects', async (req, res) => {
   try {
-    const projectData: InsertProject = req.body;
+    // Validate input data with Zod schema
+    const validationResult = insertProjectSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      const errors = validationResult.error.flatten();
+      return res.status(400).json({ 
+        error: 'Validation error', 
+        details: errors.fieldErrors 
+      });
+    }
+
+    const projectData = validationResult.data;
     const project = {
       id: randomUUID(),
       ...projectData
@@ -120,7 +148,11 @@ router.post('/api/projects', async (req, res) => {
     await projectsStorage.create(project);
     res.status(201).json(project);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create project' });
+    console.error('Project creation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to create project',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
