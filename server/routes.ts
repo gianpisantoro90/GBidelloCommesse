@@ -263,7 +263,15 @@ router.delete('/api/projects/:id', async (req, res) => {
 router.get('/api/clients', async (req, res) => {
   try {
     const clients = await clientsStorage.readAll();
-    res.json(clients);
+    const projects = await projectsStorage.readAll();
+
+    // Calculate projectsCount for each client
+    const clientsWithCount = clients.map(client => ({
+      ...client,
+      projectsCount: projects.filter(p => p.client === client.sigla).length
+    }));
+
+    res.json(clientsWithCount);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch clients' });
   }
@@ -271,15 +279,83 @@ router.get('/api/clients', async (req, res) => {
 
 router.post('/api/clients', async (req, res) => {
   try {
-    const clientData: InsertClient = req.body;
+    // Validate input data with Zod schema
+    const validationResult = insertClientSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      const errors = validationResult.error.flatten();
+      return res.status(400).json({
+        error: 'Validation error',
+        details: errors.fieldErrors
+      });
+    }
+
+    const clientData = validationResult.data;
     const client = {
       id: randomUUID(),
-      ...clientData
+      ...clientData,
+      projectsCount: 0
     };
     await clientsStorage.create(client);
     res.status(201).json(client);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create client' });
+    console.error('Client creation error:', error);
+    res.status(500).json({
+      error: 'Failed to create client',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+router.put('/api/clients/:id', async (req, res) => {
+  try {
+    // Validate input data with Zod schema (partial for updates)
+    const validationResult = insertClientSchema.partial().safeParse(req.body);
+    if (!validationResult.success) {
+      const errors = validationResult.error.flatten();
+      return res.status(400).json({
+        error: 'Validation error',
+        details: errors.fieldErrors
+      });
+    }
+
+    const updates = validationResult.data;
+    const updated = await clientsStorage.update(req.params.id, updates);
+    if (!updated) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+    res.json(updated);
+  } catch (error) {
+    console.error('Client update error:', error);
+    res.status(500).json({ error: 'Failed to update client' });
+  }
+});
+
+router.delete('/api/clients/:id', async (req, res) => {
+  try {
+    // Check if client has associated projects
+    const allProjects = await projectsStorage.readAll();
+    const client = await clientsStorage.findById(req.params.id);
+
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    const clientProjects = allProjects.filter(p => p.client === client.sigla);
+    if (clientProjects.length > 0) {
+      return res.status(400).json({
+        error: 'Cannot delete client with associated projects',
+        message: `Il cliente ha ${clientProjects.length} commesse associate. Eliminare prima le commesse.`
+      });
+    }
+
+    const deleted = await clientsStorage.delete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    console.error('Client deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete client' });
   }
 });
 
