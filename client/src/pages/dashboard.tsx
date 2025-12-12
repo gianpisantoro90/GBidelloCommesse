@@ -7,7 +7,6 @@ import EconomicDashboardCard from "@/components/dashboard/economic-dashboard-car
 import FattureScadenzaWidget from "@/components/dashboard/fatture-scadenza-widget";
 import CashFlowDashboard from "@/components/dashboard/cash-flow-dashboard";
 import NewProjectForm from "@/components/projects/new-project-form";
-import FolderStructureCard from "@/components/projects/folder-structure-card";
 import ProjectsTable from "@/components/projects/projects-table";
 import ClientsTable from "@/components/projects/clients-table";
 import ParcellaCalculator from "@/components/projects/parcella-calculator-new";
@@ -122,7 +121,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     <TabsContent value="nuova" className="bg-white rounded-b-2xl shadow-lg border border-t-0 border-gray-100 p-6 mt-0">
                       <div className="max-w-2xl mx-auto space-y-6">
                         <NewProjectForm onProjectSaved={setPendingProject} />
-                        <FolderStructureCard pendingProject={pendingProject} />
                       </div>
                     </TabsContent>
                   )}
