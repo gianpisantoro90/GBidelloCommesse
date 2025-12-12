@@ -1,4 +1,4 @@
-# G2 Ingegneria - Sistema Gestione Commesse
+# Gbidello Engineering - Sistema Gestione Commesse
 
 ## Overview
 
@@ -12,7 +12,7 @@
 - ✅ **FRONTEND/BACKEND SYNC FIX**: Resolved critical state synchronization issues
 
 **Complete System Update (August 18, 2025)**
-- ✅ **G2 LOGO UPDATE**: Replaced placeholder logo with authentic G2 Ingegneria branding
+- ✅ **G2 LOGO UPDATE**: Replaced placeholder logo with authentic Gbidello Engineering branding
 - ✅ **LUNGO TEMPLATE FIX**: Fixed folder structure creation using authentic G2 template (1_CONSEGNA, 2_PERMIT, 3_PROGETTO, etc.)
 - ✅ **PORT CONFIGURATION FIX**: Resolved localhost:5000 vs localhost:3000 mismatch in G2-START.bat  
 - ✅ **AUTO-ROUTING IMPROVEMENTS**: Fixed file moving functionality to actually move files instead of downloading
@@ -24,7 +24,7 @@
 - ✅ **FIXED AUTO-ROUTING**: Critical file routing bug resolved - original files now preserved correctly instead of creating TXT files
 - ✅ **STATUS SYNCHRONIZATION**: Fixed dashboard "Commesse Recenti" to show actual database status instead of date-based logic
 - ✅ **EDIT FUNCTIONALITY**: Added complete edit form for projects in Gestione tab with working update functionality
-- ✅ **G2 FOLDER TEMPLATES**: Updated both LUNGO and BREVE templates with authentic G2 Ingegneria folder structures from ZIP file
+- ✅ **G2 FOLDER TEMPLATES**: Updated both LUNGO and BREVE templates with authentic Gbidello Engineering folder structures from ZIP file
 - ✅ **MULTI-PROVIDER AI SYSTEM**: Claude 4.0 Sonnet + DeepSeek V3.1 support with automatic provider detection
 - ✅ **AI TOKEN OPTIMIZATION**: Increased to 800 tokens for detailed engineering analysis and reasoning  
 - ✅ **AI-ONLY ROUTING**: Enhanced prompt system restricts suggestions to existing template folders only
@@ -50,7 +50,7 @@
 - Added comprehensive error handling and user feedback in startup scripts
 - Cleaned up unnecessary files and improved project structure
 
-G2 Ingegneria is a project management system designed for engineering firms to manage "commesse" (projects/jobs). The application provides a comprehensive dashboard for creating, organizing, and tracking engineering projects with intelligent file routing capabilities. It features a modern web interface with persistent local data storage, AI-powered file organization suggestions, and support for different project templates (LUNGO and BREVE) based on project complexity.
+Gbidello Engineering is a project management system designed for engineering firms to manage "commesse" (projects/jobs). The application provides a comprehensive dashboard for creating, organizing, and tracking engineering projects with intelligent file routing capabilities. It features a modern web interface with persistent local data storage, AI-powered file organization suggestions, and support for different project templates (LUNGO and BREVE) based on project complexity.
 
 ## User Preferences
 
@@ -61,7 +61,7 @@ Preferred communication style: Simple, everyday language.
 ### Frontend Architecture
 - **Framework**: React with TypeScript, using Vite for build tooling
 - **UI Components**: Shadcn/ui component library with Radix UI primitives
-- **Styling**: Tailwind CSS with custom G2 Ingegneria color scheme and theming
+- **Styling**: Tailwind CSS with custom Gbidello Engineering color scheme and theming
 - **State Management**: React Query for server state, React hooks for local state
 - **Routing**: Wouter for lightweight client-side routing
 - **Forms**: React Hook Form with Zod validation for type-safe form handling
@@ -95,12 +95,12 @@ Preferred communication style: Simple, everyday language.
 - **Bulk File Operations**: Automated renaming of existing project files with proper prefixes
 
 ### Template System
-- **LUNGO Template**: Authentic G2 Ingegneria folder structure with 10 main sections:
+- **LUNGO Template**: Authentic Gbidello Engineering folder structure with 10 main sections:
   - 1_CONSEGNA, 2_PERMIT, 3_PROGETTO (with ARC, CME, IE, IM, IS, STR, etc.)
   - 4_MATERIALE_RICEVUTO, 5_CANTIERE, 6_VERBALI_NOTIFICHE_COMUNICAZIONI
   - 7_SOPRALLUOGHI, 8_VARIANTI, 9_PARCELLA, 10_INCARICO
 - **BREVE Template**: Simplified 4-folder structure: CONSEGNA, ELABORAZIONI, MATERIALE_RICEVUTO, SOPRALLUOGHI
-- **Template Source**: Updated from official G2 Ingegneria ZIP file with authentic folder structures
+- **Template Source**: Updated from official Gbidello Engineering ZIP file with authentic folder structures
 - **Dynamic Generation**: Template-based folder creation with customizable structures
 - **Reference Files**: Original templates stored in `/templates/` directory for maintenance
 

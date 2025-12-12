@@ -345,7 +345,7 @@ export default function ProjectsTable() {
                   {showTechInfo && (
                     <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm w-28">
                       Tipo Rapporto
-                      <span className="ml-1 text-xs text-gray-500 cursor-help" title="Chi commissiona il lavoro a G2 Ingegneria">ⓘ</span>
+                      <span className="ml-1 text-xs text-gray-500 cursor-help" title="Chi commissiona il lavoro a Gbidello Engineering">ⓘ</span>
                     </th>
                   )}
                   <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm w-24">Città</th>
