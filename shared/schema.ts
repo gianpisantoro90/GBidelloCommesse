@@ -47,6 +47,7 @@ export type InsertClient = z.infer<typeof insertClientSchema>;
 
 export interface Client extends InsertClient {
   id: string;
+  projectsCount?: number; // Calculated field: number of associated projects
 }
 
 // ============================================================================

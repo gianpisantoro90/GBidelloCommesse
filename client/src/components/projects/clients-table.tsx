@@ -6,6 +6,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -20,16 +21,25 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { type Client, type Project } from "@shared/schema";
+import { type Client, type Project, insertClientSchema } from "@shared/schema";
 
-// Schema for edit form
-const editClientSchema = z.object({
-  sigla: z.string().min(1, "Sigla è obbligatoria").max(10, "Sigla troppo lunga"),
-  name: z.string().min(1, "Nome è obbligatorio"),
+// Schema per form cliente (sia inserimento che modifica)
+const clientFormSchema = z.object({
+  sigla: z.string().min(1, "La sigla è obbligatoria").max(10, "Sigla troppo lunga (max 10 caratteri)"),
+  name: z.string().min(1, "Il nome è obbligatorio"),
+  address: z.string().optional(),
   city: z.string().optional(),
+  cap: z.string().optional(),
+  province: z.string().max(2, "Usa il codice provincia (2 lettere)").optional(),
+  piva: z.string().optional(),
+  cf: z.string().optional(),
+  email: z.string().email("Email non valida").optional().or(z.literal("")),
+  pec: z.string().email("PEC non valida").optional().or(z.literal("")),
+  phone: z.string().optional(),
+  notes: z.string().optional(),
 });
 
-type EditClientForm = z.infer<typeof editClientSchema>;
+type ClientFormData = z.infer<typeof clientFormSchema>;
 
 export default function ClientsTable() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,8 +47,9 @@ export default function ClientsTable() {
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
-  
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -51,19 +62,61 @@ export default function ClientsTable() {
     queryKey: ["/api/projects"],
   });
 
-  // Edit client form
-  const editForm = useForm<EditClientForm>({
-    resolver: zodResolver(editClientSchema),
-    defaultValues: {
-      sigla: "",
-      name: "",
-      city: "",
+  const defaultFormValues: ClientFormData = {
+    sigla: "",
+    name: "",
+    address: "",
+    city: "",
+    cap: "",
+    province: "",
+    piva: "",
+    cf: "",
+    email: "",
+    pec: "",
+    phone: "",
+    notes: "",
+  };
+
+  // Form per modifica cliente
+  const editForm = useForm<ClientFormData>({
+    resolver: zodResolver(clientFormSchema),
+    defaultValues: defaultFormValues,
+  });
+
+  // Form per nuovo cliente
+  const newClientForm = useForm<ClientFormData>({
+    resolver: zodResolver(clientFormSchema),
+    defaultValues: defaultFormValues,
+  });
+
+  // Create client mutation
+  const createClientMutation = useMutation({
+    mutationFn: async (data: ClientFormData) => {
+      const response = await apiRequest("POST", "/api/clients", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({
+        title: "Cliente creato",
+        description: "Il cliente è stato creato con successo",
+      });
+      setShowNewClientModal(false);
+      newClientForm.reset(defaultFormValues);
+    },
+    onError: (error: any) => {
+      console.error("Create client error:", error);
+      toast({
+        title: "Errore nella creazione",
+        description: error?.message || "Impossibile creare il cliente",
+        variant: "destructive",
+      });
     },
   });
 
   // Update client mutation
   const updateClientMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: EditClientForm }) => {
+    mutationFn: async ({ id, data }: { id: string; data: ClientFormData }) => {
       const response = await apiRequest("PUT", `/api/clients/${id}`, data);
       return response.json();
     },
@@ -76,7 +129,7 @@ export default function ClientsTable() {
       });
       setShowEditModal(false);
       setEditingClient(null);
-      editForm.reset();
+      editForm.reset(defaultFormValues);
     },
     onError: (error: any) => {
       console.error("Update client error:", error);
@@ -126,19 +179,39 @@ export default function ClientsTable() {
     setShowProjectsModal(true);
   };
 
+  // Handle new client
+  const handleNewClient = () => {
+    newClientForm.reset(defaultFormValues);
+    setShowNewClientModal(true);
+  };
+
+  // Handle new client form submit
+  const handleNewClientSubmit = (data: ClientFormData) => {
+    createClientMutation.mutate(data);
+  };
+
   // Handle edit client
   const handleEditClient = (client: Client) => {
     setEditingClient(client);
     editForm.reset({
       sigla: client.sigla,
       name: client.name,
+      address: client.address || "",
       city: client.city || "",
+      cap: client.cap || "",
+      province: client.province || "",
+      piva: client.piva || "",
+      cf: client.cf || "",
+      email: client.email || "",
+      pec: client.pec || "",
+      phone: client.phone || "",
+      notes: client.notes || "",
     });
     setShowEditModal(true);
   };
 
   // Handle edit form submit
-  const handleEditSubmit = (data: EditClientForm) => {
+  const handleEditSubmit = (data: ClientFormData) => {
     if (editingClient) {
       updateClientMutation.mutate({
         id: editingClient.id,
@@ -209,9 +282,11 @@ export default function ClientsTable() {
           </div>
           <Button
             className="button-g2-primary"
+            onClick={handleNewClient}
+            disabled={createClientMutation.isPending}
             data-testid="add-client"
           >
-            ➕ Nuovo Cliente
+            {createClientMutation.isPending ? "Creando..." : "➕ Nuovo Cliente"}
           </Button>
         </div>
       </div>
@@ -333,13 +408,13 @@ export default function ClientsTable() {
                           {project.code}
                         </span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          project.status === 'In Corso' 
-                            ? 'bg-yellow-100 text-yellow-800' 
-                            : project.status === 'Conclusa'
+                          project.status === 'in_corso'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : project.status === 'conclusa'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {project.status}
+                          {project.status === 'in_corso' ? 'In Corso' : project.status === 'conclusa' ? 'Conclusa' : 'Sospesa'}
                         </span>
                       </div>
                       <div className="mt-1 text-sm text-gray-600">
@@ -370,87 +445,537 @@ export default function ClientsTable() {
 
       {/* Edit Client Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifica Cliente</DialogTitle>
           </DialogHeader>
-          
+
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
+              {/* Dati principali */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="sigla"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sigla Cliente *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="es. ABC"
+                          maxLength={10}
+                          disabled={updateClientMutation.isPending}
+                          className="uppercase"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome Cliente *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Ragione sociale / Nome completo"
+                          disabled={updateClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Indirizzo */}
               <FormField
                 control={editForm.control}
-                name="sigla"
+                name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Sigla Cliente *</FormLabel>
+                    <FormLabel>Indirizzo</FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         {...field}
-                        placeholder="es. ABC"
-                        maxLength={10}
+                        placeholder="Via/Piazza, numero civico"
                         disabled={updateClientMutation.isPending}
-                        data-testid="input-edit-client-sigla"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Città</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Città"
+                          disabled={updateClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="cap"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CAP</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="00000"
+                          maxLength={5}
+                          disabled={updateClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="province"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provincia</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="RM"
+                          maxLength={2}
+                          className="uppercase"
+                          disabled={updateClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Dati fiscali */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="piva"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Partita IVA</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="12345678901"
+                          maxLength={11}
+                          disabled={updateClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="cf"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Codice Fiscale</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="RSSMRA80A01H501U"
+                          maxLength={16}
+                          className="uppercase"
+                          disabled={updateClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Contatti */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="email@esempio.it"
+                          disabled={updateClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="pec"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PEC</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="pec@esempio.it"
+                          disabled={updateClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={editForm.control}
-                name="name"
+                name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome Cliente *</FormLabel>
+                    <FormLabel>Telefono</FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         {...field}
-                        placeholder="Nome completo del cliente"
+                        placeholder="+39 06 1234567"
                         disabled={updateClientMutation.isPending}
-                        data-testid="input-edit-client-name"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
+              {/* Note */}
               <FormField
                 control={editForm.control}
-                name="city"
+                name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Città</FormLabel>
+                    <FormLabel>Note</FormLabel>
                     <FormControl>
-                      <Input 
+                      <Textarea
                         {...field}
-                        placeholder="Città principale del cliente"
+                        placeholder="Eventuali note sul cliente..."
+                        rows={3}
                         disabled={updateClientMutation.isPending}
-                        data-testid="input-edit-client-city"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setShowEditModal(false)}
                   disabled={updateClientMutation.isPending}
-                  data-testid="button-cancel-edit-client"
                 >
                   Annulla
                 </Button>
                 <Button
                   type="submit"
                   disabled={updateClientMutation.isPending}
-                  data-testid="button-save-edit-client"
                 >
-                  {updateClientMutation.isPending ? "Salvando..." : "Salva"}
+                  {updateClientMutation.isPending ? "Salvando..." : "Salva Modifiche"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Client Modal */}
+      <Dialog open={showNewClientModal} onOpenChange={setShowNewClientModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nuovo Cliente</DialogTitle>
+          </DialogHeader>
+
+          <Form {...newClientForm}>
+            <form onSubmit={newClientForm.handleSubmit(handleNewClientSubmit)} className="space-y-4">
+              {/* Dati principali */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={newClientForm.control}
+                  name="sigla"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sigla Cliente *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="es. ABC"
+                          maxLength={10}
+                          disabled={createClientMutation.isPending}
+                          className="uppercase"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={newClientForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome Cliente *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Ragione sociale / Nome completo"
+                          disabled={createClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Indirizzo */}
+              <FormField
+                control={newClientForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Indirizzo</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Via/Piazza, numero civico"
+                        disabled={createClientMutation.isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={newClientForm.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Città</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Città"
+                          disabled={createClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={newClientForm.control}
+                  name="cap"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CAP</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="00000"
+                          maxLength={5}
+                          disabled={createClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={newClientForm.control}
+                  name="province"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provincia</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="RM"
+                          maxLength={2}
+                          className="uppercase"
+                          disabled={createClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Dati fiscali */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={newClientForm.control}
+                  name="piva"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Partita IVA</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="12345678901"
+                          maxLength={11}
+                          disabled={createClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={newClientForm.control}
+                  name="cf"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Codice Fiscale</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="RSSMRA80A01H501U"
+                          maxLength={16}
+                          className="uppercase"
+                          disabled={createClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Contatti */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={newClientForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="email@esempio.it"
+                          disabled={createClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={newClientForm.control}
+                  name="pec"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PEC</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="pec@esempio.it"
+                          disabled={createClientMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={newClientForm.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefono</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="+39 06 1234567"
+                        disabled={createClientMutation.isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Note */}
+              <FormField
+                control={newClientForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Note</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Eventuali note sul cliente..."
+                        rows={3}
+                        disabled={createClientMutation.isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowNewClientModal(false)}
+                  disabled={createClientMutation.isPending}
+                >
+                  Annulla
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createClientMutation.isPending}
+                >
+                  {createClientMutation.isPending ? "Creando..." : "Crea Cliente"}
                 </Button>
               </DialogFooter>
             </form>
