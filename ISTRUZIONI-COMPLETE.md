@@ -1,4 +1,4 @@
-# 🚀 G2 INGEGNERIA - MANUALE DI AVVIO
+# 🚀 GBIDELLO ENGINEERING - MANUALE DI AVVIO
 
 ## ⚡ AVVIO RAPIDO
 
@@ -18,7 +18,7 @@
 - **Persistenza database** - Dati salvati permanentemente su PostgreSQL
 
 ### Caratteristiche Tecniche
-- **Logo G2 autentico** - Branding ufficiale G2 Ingegneria
+- **Logo G2 autentico** - Branding ufficiale Gbidello Engineering
 - **Codici commessa YY+SIGLA+CITTÀ+NN** - Formato standardizzato G2
 - **Stati progetto** - In Corso, Conclusa, Sospesa con badge colorati
 - **Scansione ricorsiva** - Rinomina file in tutte le sottocartelle
@@ -62,7 +62,7 @@ Il file `G2-START.bat` gestisce automaticamente:
 ## 📁 STRUTTURA PROGETTO PULITA
 
 ```
-G2-Ingegneria/
+Gbidello-Engineering/
 ├── G2-START.bat           # 🚀 FILE PRINCIPALE DI AVVIO
 ├── client/                # 💻 Frontend React + TypeScript
 ├── server/                # 🔧 Backend Express + API
@@ -130,7 +130,7 @@ SOPRALLUOGHI/
 
 ### Il browser non si apre
 1. Aprire manualmente http://localhost:5000
-2. Verificare che il server sia avviato (messaggio "G2 Ingegneria avviato con successo!")
+2. Verificare che il server sia avviato (messaggio "Gbidello Engineering avviato con successo!")
 
 ### Porta già in uso
 - Il sistema rileva automaticamente la porta e libera 5000
@@ -154,7 +154,7 @@ Il sistema è completo e testato. Per supporto tecnico:
 
 ## 📞 SUPPORTO
 
-Sistema sviluppato per G2 Ingegneria con:
+Sistema sviluppato per Gbidello Engineering con:
 - Autenticazione logo e template ufficiali
 - Integrazione completa File System API
 - Database PostgreSQL per produzione
@@ -163,7 +163,7 @@ Sistema sviluppato per G2 Ingegneria con:
 ## 📂 STRUTTURA FILE
 
 ```
-G2-Ingegneria/
+Gbidello-Engineering/
 ├── data/                     # 💾 DATI PERSISTENTI (NON CANCELLARE!)
 │   ├── projects.json         # Lista commesse
 │   ├── clients.json          # Anagrafica clienti  
@@ -247,7 +247,7 @@ Dopo l'avvio dovresti vedere:
 [OK] Directory data trovata
 [OK] Dipendenze gia' presenti
 [OK] Porta 5000 liberata
-[AVVIO] G2 Ingegneria in esecuzione...
+[AVVIO] Gbidello Engineering in esecuzione...
 [INFO] Apri browser su: http://localhost:5000
 ```
 

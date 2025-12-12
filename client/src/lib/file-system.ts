@@ -9,7 +9,7 @@ export interface ProjectTemplate {
   structure: FolderStructure;
 }
 
-// Template autentico G2 Ingegneria da file ZIP di riferimento
+// Template autentico Gbidello Engineering da file ZIP di riferimento
 const TEMPLATE_LUNGO: FolderStructure = {
   "1_CONSEGNA": {},
   "2_PERMIT": {},

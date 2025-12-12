@@ -1,5 +1,5 @@
 @echo off
-title G2 Ingegneria - Sistema Gestione Commesse
+title Gbidello Engineering - Sistema Gestione Commesse
 cls
 color 0A
 
@@ -76,7 +76,7 @@ REM === AVVIO APPLICAZIONE ===
 echo.
 echo ================================================
 echo.
-echo [AVVIO] G2 Ingegneria in esecuzione...
+echo [AVVIO] Gbidello Engineering in esecuzione...
 echo.
 echo [INFO] Dati salvati in: %cd%\data
 echo [INFO] Porta utilizzata: %APP_PORT%
