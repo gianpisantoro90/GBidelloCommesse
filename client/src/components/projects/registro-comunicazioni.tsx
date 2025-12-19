@@ -157,7 +157,11 @@ function CommunicationForm({
             <SelectContent>
               {projects.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
-                  {project.code} - {project.client}
+                  <div className="flex flex-col">
+                    <span className="font-semibold">{project.code}</span>
+                    <span className="text-sm text-gray-600">{project.object}</span>
+                    <span className="text-xs text-gray-500">Cliente: {project.client}</span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>

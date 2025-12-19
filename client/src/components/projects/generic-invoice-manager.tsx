@@ -322,13 +322,19 @@ export default function GenericInvoiceManager({ config }: GenericInvoiceManagerP
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div className="flex gap-2">
           <Select value={filterProjectId} onValueChange={setFilterProjectId}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[280px]">
               <SelectValue placeholder="Tutte le commesse" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutte le commesse</SelectItem>
               {projects.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.code}</SelectItem>
+                <SelectItem key={p.id} value={p.id}>
+                  <div className="flex flex-col">
+                    <span className="font-semibold">{p.code}</span>
+                    <span className="text-sm text-gray-600 truncate max-w-[250px]">{p.object}</span>
+                    <span className="text-xs text-gray-500">Cliente: {p.client}</span>
+                  </div>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -497,7 +503,13 @@ export default function GenericInvoiceManager({ config }: GenericInvoiceManagerP
                   </SelectTrigger>
                   <SelectContent>
                     {projects.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.code} - {p.object}</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>
+                        <div className="flex flex-col">
+                          <span className="font-semibold">{p.code}</span>
+                          <span className="text-sm text-gray-600">{p.object}</span>
+                          <span className="text-xs text-gray-500">Cliente: {p.client}</span>
+                        </div>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
